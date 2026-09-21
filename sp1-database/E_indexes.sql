@@ -1,0 +1,2 @@
+-- E_indexes.sql
+-- This script creates indexes for the database.

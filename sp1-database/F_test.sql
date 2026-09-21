@@ -1,0 +1,2 @@
+-- F_test.sql
+-- This script contains test queries for the database.

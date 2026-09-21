@@ -1,0 +1,6 @@
+   # Database backups (too large, download from Moodle)
+   *.backup
+
+   # Test output and local files
+   *.log
+   .env

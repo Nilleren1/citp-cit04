@@ -1,0 +1,2 @@
+-- B2_build_movie_db.sql
+-- This script creates the movie database and its tables.

@@ -1,0 +1,2 @@
+-- D_functions.sql
+-- This script creates custom functions for the database.

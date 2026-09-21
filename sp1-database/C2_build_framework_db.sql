@@ -1,0 +1,2 @@
+-- C2_build_framework_db.sql
+-- This script creates the framework database and its tables.
