@@ -335,6 +335,78 @@ BEGIN
            v_is_new, v_rated_at, v_new_avg::numeric, v_votes;
 END $$;
 
+-- D4_structured_search_functions (task 1-D.4)
+--
+-- Design decisions:
+-- You can filter on any combination of the four parameters: title, plot,
+-- characters and person names. You don't have to include all four parameters.
+-- Atleast one parameter must be provided.
+--
+-- NULL, empty strings and whitespace-only values are treated as missing parameters
+-- using COALESCE() and btrim().
+--
+-- ILIKE could be used for case-insensitive substring matching, but it treats
+-- characters such as % and _ as wildcard characters. We want these characters
+-- to be treated as normal search characters instead.
+--
+-- Therefore, POSITION() is used together with LOWER(). POSITION() finds the
+-- first occurrence of a substring, while LOWER() makes the comparison
+-- case-insensitive.
+--
+-- LEFT JOIN is used so titles without credits are not automatically removed
+-- from the result. When person_name is not provided, these titles can still
+-- satisfy the other search criteria.
+--
+-- DISTINCT removes duplicate titles when one title has multiple matching worked_on/person rows.
+--
+-- The search is logged to the users search history. Only provided parameters are logged.
+-- example: "title=Batman, person=Christian Bale" instead of "title=Batman, plot=, characters=, person=Christian Bale"
+--
+-- tconst is stored as CHAR(10), so rtrim() removes any trailing padding spaces before returning it as text.
+
+-- DROP FUNCTION IF EXISTS structured_string_search(text, text, text, text, integer);
+
+CREATE FUNCTION structured_string_search(
+    p_title       text,
+    p_plot        text,
+    p_characters  text,
+    p_person_name text,
+    p_user_id     integer DEFAULT NULL
+)
+RETURNS TABLE (tconst text, primarytitle text)
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_query_text text;
+BEGIN
+    IF btrim(COALESCE(p_title, '')) = ''
+       AND btrim(COALESCE(p_plot, '')) = ''
+       AND btrim(COALESCE(p_characters, '')) = ''
+       AND btrim(COALESCE(p_person_name, '')) = '' THEN
+        RAISE EXCEPTION 'At least one of title, plot, characters or person name must be given';
+    END IF;
+
+    IF p_user_id IS NOT NULL THEN
+        SELECT string_agg(part, ', ') INTO v_query_text
+        FROM (VALUES ('title=' || p_title),
+                      ('plot=' || p_plot),
+                      ('characters=' || p_characters),
+                      ('person=' || p_person_name)) AS parts(part)
+        WHERE part IS NOT NULL
+          AND part NOT IN ('title=', 'plot=', 'characters=', 'person=');
+        PERFORM log_search(p_user_id, v_query_text);
+    END IF;
+
+    RETURN QUERY
+    SELECT DISTINCT rtrim(t.tconst)::text, t.primarytitle
+    FROM title t
+    LEFT JOIN worked_on wo ON wo.tconst = t.tconst
+    LEFT JOIN person    p  ON p.nconst  = wo.nconst
+    WHERE (btrim(COALESCE(p_title, ''))      = '' OR position(lower(p_title)      IN lower(t.primarytitle))  > 0)
+      AND (btrim(COALESCE(p_plot, ''))       = '' OR position(lower(p_plot)       IN lower(t.plot))          > 0)
+      AND (btrim(COALESCE(p_characters, '')) = '' OR position(lower(p_characters) IN lower(wo.characters))   > 0)
+      AND (btrim(COALESCE(p_person_name, '')) = '' OR position(lower(p_person_name) IN lower(p.primaryname)) > 0)
+    ORDER BY t.primarytitle;
+END $$;
 
 -- =====================================================================
 --  D.6 Co-players (task 1-D.6)
