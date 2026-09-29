@@ -1,7 +1,23 @@
 -- D_functions.sql
 -- This script creates custom functions for the database.
 
--- D1_framework_functions.sql   (task 1-D.1)
+-- D1_framework_functions (task 1-D.1)
+
+-- DROP FUNCTION IF EXISTS create_user(varchar, text);
+-- DROP FUNCTION IF EXISTS get_user(varchar);
+-- DROP FUNCTION IF EXISTS update_password(integer, text);
+-- DROP FUNCTION IF EXISTS delete_user(integer);
+-- DROP FUNCTION IF EXISTS add_person_bookmark(integer, character(10));
+-- DROP FUNCTION IF EXISTS remove_person_bookmark(integer, character(10));
+-- DROP FUNCTION IF EXISTS get_person_bookmarks(intege-- r);
+-- DROP FUNCTION IF EXISTS add_title_bookmark(integer, character(10), varchar);
+-- DROP FUNCTION IF EXISTS update_title_bookmark_status(integer, character(10), varchar);
+-- DROP FUNCTION IF EXISTS remove_title_bookmark(integer, character(10));
+-- DROP FUNCTION IF EXISTS get_title_bookmarks(integer, varchar);
+-- DROP FUNCTION IF EXISTS log_search(integer, text);
+-- DROP FUNCTION IF EXISTS get_search_history(integer, integer);
+-- DROP FUNCTION IF EXISTS clear_search_history(integer);
+-- DROP FUNCTION IF EXISTS get_rating_history(integer);
 
 -- 1. User management
 -- Add
@@ -217,8 +233,111 @@ LANGUAGE sql STABLE AS $$
     ORDER BY r.created_at DESC, t.primarytitle;
 $$;
 
+-- D2_string_search (task 1-D.2)
+
+-- DROP FUNCTION IF EXISTS string_search(text, integer);
+
+CREATE FUNCTION string_search(p_search_string text, p_user_id integer DEFAULT NULL)
+RETURNS TABLE (tconst text, primarytitle text)
+LANGUAGE plpgsql AS $$
+BEGIN
+    IF p_search_string IS NULL OR btrim(p_search_string) = '' THEN
+        RAISE EXCEPTION 'Search string must not be empty';
+    END IF;
+ 
+    IF p_user_id IS NOT NULL THEN
+        PERFORM log_search(p_user_id, p_search_string);
+    END IF;
+ 
+    RETURN QUERY
+    SELECT rtrim(t.tconst)::text, t.primarytitle
+    FROM title t
+    WHERE position(lower(p_search_string) IN lower(t.primarytitle)) > 0
+       OR position(lower(p_search_string) IN lower(t.plot)) > 0
+    ORDER BY t.primarytitle;
+END $$;
+
+-- D3_title_rating (task 1-D.3)
+
+-- DROP FUNCTION IF EXISTS rate(integer, character(10), integer, text);
+
+CREATE FUNCTION rate(p_user_id integer, p_tconst character(10),
+                     p_rating integer, p_review text DEFAULT NULL)
+RETURNS TABLE (
+    tconst        text,
+    user_id       integer,
+    rating        integer,
+    review        text,
+    is_new_rating boolean,
+    rated_at      timestamptz,
+    averagerating numeric,
+    numvotes      integer
+)
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_old_avg     numeric(5,1);
+    v_votes       integer;
+    v_prev_rating integer;
+    v_new_avg     numeric(5,1);
+    v_is_new      boolean;
+    v_review      text;
+    v_rated_at    timestamptz;
+BEGIN
+    IF p_rating IS NULL OR p_rating < 1 OR p_rating > 10 THEN
+        RAISE EXCEPTION 'Rating must be an integer between 1 and 10, got %', p_rating;
+    END IF;
+ 
+    SELECT t.averagerating, t.numvotes INTO v_old_avg, v_votes
+    FROM title t
+    WHERE t.tconst = p_tconst
+    FOR UPDATE;
+ 
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'No title with tconst %', p_tconst;
+    END IF;
+ 
+    v_votes := COALESCE(v_votes, 0);
+ 
+    SELECT r.rating INTO v_prev_rating
+    FROM rating r
+    WHERE r.user_id = p_user_id AND r.tconst = p_tconst
+    FOR UPDATE;
+ 
+    IF FOUND THEN
+        v_is_new := false;
+        v_new_avg := ROUND(
+            (COALESCE(v_old_avg, 0) * v_votes - v_prev_rating + p_rating)
+            / v_votes, 1);
+ 
+        UPDATE rating AS r
+        SET rating = p_rating,
+            review = COALESCE(p_review, r.review)
+        WHERE r.user_id = p_user_id AND r.tconst = p_tconst
+        RETURNING r.review, r.created_at INTO v_review, v_rated_at;
+    ELSE
+        v_is_new := true;
+        v_new_avg := ROUND(
+            (COALESCE(v_old_avg, 0) * v_votes + p_rating)
+            / (v_votes + 1), 1);
+        v_votes := v_votes + 1;
+ 
+        INSERT INTO rating AS r (user_id, tconst, rating, review)
+        VALUES (p_user_id, p_tconst, p_rating, p_review)
+        RETURNING r.review, r.created_at INTO v_review, v_rated_at;
+    END IF;
+ 
+    UPDATE title AS t
+    SET averagerating = v_new_avg, numvotes = v_votes
+    WHERE t.tconst = p_tconst;
+ 
+    RETURN QUERY
+    SELECT rtrim(p_tconst)::text, p_user_id, p_rating, v_review,
+           v_is_new, v_rated_at, v_new_avg::numeric, v_votes;
+END $$;
+
+
 -- =====================================================================
---  D.6 Co-players
+--  D.6 Co-players (task 1-D.6)
 -- =====================================================================
 -- collects the most important columns from title, principals and name in a single virtual table.
 CREATE OR REPLACE VIEW title_person AS
