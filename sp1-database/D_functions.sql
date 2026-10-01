@@ -1,15 +1,16 @@
 -- D_functions.sql
 -- This script creates custom functions for the database.
 
--- D1_framework_functions (task 1-D.1)
+-- D1_framework_functions.sql (task 1-D.1)
 
+-- 0. Wipe-out of old versions
 DROP FUNCTION IF EXISTS create_user(varchar, text);
 DROP FUNCTION IF EXISTS get_user(varchar);
 DROP FUNCTION IF EXISTS update_password(integer, text);
 DROP FUNCTION IF EXISTS delete_user(integer);
 DROP FUNCTION IF EXISTS add_person_bookmark(integer, character(10));
 DROP FUNCTION IF EXISTS remove_person_bookmark(integer, character(10));
-DROP FUNCTION IF EXISTS get_person_bookmarks(intege-- r);
+DROP FUNCTION IF EXISTS get_person_bookmarks(integer);
 DROP FUNCTION IF EXISTS add_title_bookmark(integer, character(10), varchar);
 DROP FUNCTION IF EXISTS update_title_bookmark_status(integer, character(10), varchar);
 DROP FUNCTION IF EXISTS remove_title_bookmark(integer, character(10));
@@ -17,7 +18,7 @@ DROP FUNCTION IF EXISTS get_title_bookmarks(integer, varchar);
 DROP FUNCTION IF EXISTS log_search(integer, text);
 DROP FUNCTION IF EXISTS get_search_history(integer, integer);
 DROP FUNCTION IF EXISTS clear_search_history(integer);
-DROP FUNCTION IF EXISTS get_rating_history(integer);
+DROP FUNCTION IF EXISTS get_user_ratings(integer);
 
 -- 1. User management
 -- Add
@@ -78,7 +79,7 @@ END $$;
 
 -- 2. Bookmarking people
 -- Add
-CREATE FUNCTION add_person_bookmark(p_user_id integer, p_nconst character)
+CREATE FUNCTION add_person_bookmark(p_user_id integer, p_nconst character(10))
 RETURNS void
 LANGUAGE sql AS $$
     INSERT INTO bookmark_person (user_id, nconst)
@@ -87,7 +88,7 @@ LANGUAGE sql AS $$
 $$;
 
 -- Delete
-CREATE FUNCTION remove_person_bookmark(p_user_id integer, p_nconst character)
+CREATE FUNCTION remove_person_bookmark(p_user_id integer, p_nconst character(10))
 RETURNS boolean
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -114,7 +115,7 @@ $$;
 
 -- 3. Bookmarking titles
 -- Add
-CREATE FUNCTION add_title_bookmark(p_user_id integer, p_tconst character,
+CREATE FUNCTION add_title_bookmark(p_user_id integer, p_tconst character(10),
                                    p_status varchar DEFAULT 'watchlist')
 RETURNS void
 LANGUAGE plpgsql AS $$
@@ -132,7 +133,7 @@ EXCEPTION
 END $$;
 
 -- Update
-CREATE FUNCTION update_title_bookmark_status(p_user_id integer, p_tconst character,
+CREATE FUNCTION update_title_bookmark_status(p_user_id integer, p_tconst character(10),
                                              p_status varchar)
 RETURNS boolean
 LANGUAGE plpgsql AS $$
@@ -147,7 +148,7 @@ BEGIN
 END $$;
 
 -- Delete
-CREATE FUNCTION remove_title_bookmark(p_user_id integer, p_tconst character)
+CREATE FUNCTION remove_title_bookmark(p_user_id integer, p_tconst character(10))
 RETURNS boolean
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -217,8 +218,9 @@ LANGUAGE sql AS $$
     SELECT count(*)::integer FROM deleted;
 $$;
 
--- 5. Rating history
-CREATE FUNCTION get_rating_history(p_user_id integer)
+-- 5. Rating
+-- Get all
+CREATE FUNCTION get_user_ratings(p_user_id integer)
 RETURNS TABLE (tconst text, primarytitle text, rating smallint, review text,
                rated_at timestamptz)
 LANGUAGE sql STABLE AS $$
@@ -339,6 +341,57 @@ BEGIN
     RETURN QUERY
     SELECT rtrim(p_tconst)::text, p_user_id, p_rating, v_review,
            v_is_new, v_rated_at, v_new_avg::numeric, v_votes;
+END $$;
+
+DROP FUNCTION IF EXISTS delete_rating(integer, character(10));
+
+CREATE FUNCTION delete_rating(p_user_id integer, p_tconst character(10))
+RETURNS boolean
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_old_avg      numeric(5,1);
+    v_votes        integer;
+    v_removed_rating integer;
+    v_new_avg      numeric(5,1);
+    v_new_votes    integer;
+BEGIN
+    SELECT t.averagerating, t.numvotes INTO v_old_avg, v_votes
+    FROM title t
+    WHERE t.tconst = p_tconst
+    FOR UPDATE;
+ 
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'No title with tconst %', p_tconst;
+    END IF;
+ 
+    DELETE FROM rating AS r
+    WHERE r.user_id = p_user_id AND r.tconst = p_tconst
+    RETURNING r.rating INTO v_removed_rating;
+ 
+    IF NOT FOUND THEN
+        RETURN false;
+    END IF;
+ 
+    v_new_votes := v_votes - 1;
+ 
+    IF v_new_votes <= 0 THEN
+        v_new_avg   := NULL;
+        v_new_votes := NULL;
+    ELSE
+        v_new_avg := ROUND(
+            (COALESCE(v_old_avg, 0) * v_votes - v_removed_rating)
+            / v_new_votes, 1);
+    END IF;
+ 
+    UPDATE title AS t
+    SET averagerating = v_new_avg, numvotes = v_new_votes
+    WHERE t.tconst = p_tconst;
+ 
+    IF to_regprocedure('refresh_name_ratings_for_title(character)') IS NOT NULL THEN
+        PERFORM refresh_name_ratings_for_title(p_tconst);
+    END IF;
+ 
+    RETURN true;
 END $$;
 
 -- D4_structured_search_functions (task 1-D.4)
@@ -753,5 +806,42 @@ BEGIN
     JOIN title t ON t.tconst = s.tconst
     ORDER BY (p_genre_weight * s.jaccard_genre + p_people_weight * s.jaccard_people) DESC,
              s.shared_people DESC, s.shared_genres DESC, t.primarytitle
+    LIMIT p_limit;
+END $$;
+
+-- D10_person_words   (task 1-D.10)
+
+DROP FUNCTION IF EXISTS person_words(text, integer);
+
+CREATE FUNCTION person_words(p_person_name text, p_limit integer DEFAULT 10)
+RETURNS TABLE (word text, frequency integer)
+LANGUAGE plpgsql STABLE AS $$
+BEGIN
+    IF p_person_name IS NULL OR btrim(p_person_name) = '' THEN
+        RAISE EXCEPTION 'Person name must not be empty';
+    END IF;
+
+    IF p_limit IS NULL OR p_limit < 1 THEN
+        RAISE EXCEPTION 'Limit must be a positive integer, got %', p_limit;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM person pe WHERE lower(pe.primaryname) = lower(p_person_name)) THEN
+        RAISE EXCEPTION 'No person found with name %', p_person_name;
+    END IF;
+
+    RETURN QUERY
+    WITH my_people AS (
+        SELECT pe.nconst FROM person pe WHERE lower(pe.primaryname) = lower(p_person_name)
+    ),
+    my_titles AS (
+        SELECT DISTINCT wo.tconst
+        FROM worked_on wo
+        WHERE wo.nconst IN (SELECT mp.nconst FROM my_people mp)
+    )
+    SELECT tw.word, COUNT(DISTINCT tw.tconst)::integer AS frequency
+    FROM title_word tw
+    WHERE tw.tconst IN (SELECT mt.tconst FROM my_titles mt)
+    GROUP BY tw.word
+    ORDER BY COUNT(DISTINCT tw.tconst) DESC, tw.word
     LIMIT p_limit;
 END $$;
