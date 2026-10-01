@@ -3,21 +3,21 @@
 
 -- D1_framework_functions (task 1-D.1)
 
--- DROP FUNCTION IF EXISTS create_user(varchar, text);
--- DROP FUNCTION IF EXISTS get_user(varchar);
--- DROP FUNCTION IF EXISTS update_password(integer, text);
--- DROP FUNCTION IF EXISTS delete_user(integer);
--- DROP FUNCTION IF EXISTS add_person_bookmark(integer, character(10));
--- DROP FUNCTION IF EXISTS remove_person_bookmark(integer, character(10));
--- DROP FUNCTION IF EXISTS get_person_bookmarks(intege-- r);
--- DROP FUNCTION IF EXISTS add_title_bookmark(integer, character(10), varchar);
--- DROP FUNCTION IF EXISTS update_title_bookmark_status(integer, character(10), varchar);
--- DROP FUNCTION IF EXISTS remove_title_bookmark(integer, character(10));
--- DROP FUNCTION IF EXISTS get_title_bookmarks(integer, varchar);
--- DROP FUNCTION IF EXISTS log_search(integer, text);
--- DROP FUNCTION IF EXISTS get_search_history(integer, integer);
--- DROP FUNCTION IF EXISTS clear_search_history(integer);
--- DROP FUNCTION IF EXISTS get_rating_history(integer);
+DROP FUNCTION IF EXISTS create_user(varchar, text);
+DROP FUNCTION IF EXISTS get_user(varchar);
+DROP FUNCTION IF EXISTS update_password(integer, text);
+DROP FUNCTION IF EXISTS delete_user(integer);
+DROP FUNCTION IF EXISTS add_person_bookmark(integer, character(10));
+DROP FUNCTION IF EXISTS remove_person_bookmark(integer, character(10));
+DROP FUNCTION IF EXISTS get_person_bookmarks(intege-- r);
+DROP FUNCTION IF EXISTS add_title_bookmark(integer, character(10), varchar);
+DROP FUNCTION IF EXISTS update_title_bookmark_status(integer, character(10), varchar);
+DROP FUNCTION IF EXISTS remove_title_bookmark(integer, character(10));
+DROP FUNCTION IF EXISTS get_title_bookmarks(integer, varchar);
+DROP FUNCTION IF EXISTS log_search(integer, text);
+DROP FUNCTION IF EXISTS get_search_history(integer, integer);
+DROP FUNCTION IF EXISTS clear_search_history(integer);
+DROP FUNCTION IF EXISTS get_rating_history(integer);
 
 -- 1. User management
 -- Add
@@ -235,7 +235,7 @@ $$;
 
 -- D2_string_search (task 1-D.2)
 
--- DROP FUNCTION IF EXISTS string_search(text, integer);
+DROP FUNCTION IF EXISTS string_search(text, integer);
 
 CREATE FUNCTION string_search(p_search_string text, p_user_id integer DEFAULT NULL)
 RETURNS TABLE (tconst text, primarytitle text)
@@ -259,7 +259,7 @@ END $$;
 
 -- D3_title_rating (task 1-D.3)
 
--- DROP FUNCTION IF EXISTS rate(integer, character(10), integer, text);
+DROP FUNCTION IF EXISTS rate(integer, character(10), integer, text);
 
 CREATE FUNCTION rate(p_user_id integer, p_tconst character(10),
                      p_rating integer, p_review text DEFAULT NULL)
@@ -329,6 +329,12 @@ BEGIN
     UPDATE title AS t
     SET averagerating = v_new_avg, numvotes = v_votes
     WHERE t.tconst = p_tconst;
+
+    -- Keeps the name_rating up to date when a new rating for title is added.
+    -- Only defined once D7 has been run.
+    IF to_regprocedure('update_name_ratings_for_title(character)') IS NOT NULL THEN
+        PERFORM update_name_ratings_for_title(p_tconst);
+    END IF;
  
     RETURN QUERY
     SELECT rtrim(p_tconst)::text, p_user_id, p_rating, v_review,
@@ -364,7 +370,7 @@ END $$;
 --
 -- tconst is stored as CHAR(10), so rtrim() removes any trailing padding spaces before returning it as text.
 
--- DROP FUNCTION IF EXISTS structured_string_search(text, text, text, text, integer);
+DROP FUNCTION IF EXISTS structured_string_search(text, text, text, text, integer);
 
 CREATE FUNCTION structured_string_search(
     p_title       text,
@@ -408,6 +414,8 @@ BEGIN
     ORDER BY t.primarytitle;
 END $$;
 
+
+
 -- =====================================================================
 --  D.6 Co-players (task 1-D.6)
 -- =====================================================================
@@ -433,3 +441,317 @@ LANGUAGE sql AS $$
     GROUP BY other.nconst, other.primaryname
     ORDER BY frequency DESC, other.primaryname;
 $$;
+
+-- D7_name_rating (task 1-D.7)
+
+-- Design decisions:
+-- Calculate the rating for all persons not just actors.
+--
+-- Created a new table name_rating with the weigthed rating, number of titles 
+-- and number of votes
+--
+-- Added some code at the end of D3 which will keep the name_rating updated
+-- when a new rating for a title is added.
+--
+-- Using "SELECT DISTINCT wo.nconst, wo.tconst" to ensure that a person with
+-- more than one worked_on row for the same title is only counted once.
+
+-- 1. Table
+DROP TABLE IF EXISTS name_rating;
+
+CREATE TABLE name_rating (
+    nconst      character(10)   PRIMARY KEY REFERENCES person(nconst),
+    rating      numeric(5,1)    NOT NULL,
+    numvotes    integer         NOT NULL,
+    num_titles  integer         NOT NULL,
+    updated_at  timestamptz     NOT NULL DEFAULT now()
+);
+
+-- 2. Functions
+DROP FUNCTION IF EXISTS update_name_ratings();
+DROP FUNCTION IF EXISTS update_name_ratings_for_title(character(10));
+
+-- Updates all name ratings-
+CREATE FUNCTION update_name_ratings()
+RETURNS void
+LANGUAGE sql AS $$
+    TRUNCATE name_rating;
+
+    INSERT INTO name_rating (nconst, rating, numvotes, num_titles)
+    SELECT dc.nconst,
+           ROUND(SUM(t.averagerating * t.numvotes) / SUM(t.numvotes), 1),
+           SUM(t.numvotes),
+           COUNT(*)
+    FROM (SELECT DISTINCT wo.nconst, wo.tconst FROM worked_on wo) dc
+    JOIN title t ON t.tconst = dc.tconst
+    WHERE t.averagerating IS NOT NULL AND t.numvotes > 0
+    GROUP BY dc.nconst;
+$$;
+
+-- Updates name_ratings only for one title.
+-- Used in D3 when new rating gets added.
+CREATE FUNCTION update_name_ratings_for_title(p_tconst character(10))
+RETURNS void
+LANGUAGE sql AS $$
+    WITH affected AS (
+        SELECT DISTINCT nconst FROM worked_on WHERE tconst = p_tconst
+    ),
+    distinct_credits AS (
+        SELECT DISTINCT wo.nconst, wo.tconst
+        FROM worked_on wo
+        WHERE wo.nconst IN (SELECT nconst FROM affected)
+    ),
+    rated AS (
+        SELECT dc.nconst,
+               SUM(t.averagerating * t.numvotes) AS weighted_sum,
+               SUM(t.numvotes)                   AS total_votes,
+               COUNT(*)                          AS title_count
+        FROM distinct_credits dc
+        JOIN title t ON t.tconst = dc.tconst
+        WHERE t.averagerating IS NOT NULL AND t.numvotes > 0
+        GROUP BY dc.nconst
+    )
+    INSERT INTO name_rating (nconst, rating, numvotes, num_titles, updated_at)
+    SELECT nconst, ROUND(weighted_sum / total_votes, 1), total_votes, title_count, now()
+    FROM rated
+    ON CONFLICT (nconst) DO UPDATE
+        SET rating     = EXCLUDED.rating,
+            numvotes   = EXCLUDED.numvotes,
+            num_titles = EXCLUDED.num_titles,
+            updated_at = EXCLUDED.updated_at;
+
+    WITH affected AS (
+        SELECT DISTINCT nconst FROM worked_on WHERE tconst = p_tconst
+    )
+    DELETE FROM name_rating
+    WHERE nconst IN (SELECT nconst FROM affected)
+      AND nconst NOT IN (
+          SELECT DISTINCT wo.nconst
+          FROM worked_on wo
+          JOIN title t ON t.tconst = wo.tconst
+          WHERE wo.nconst IN (SELECT nconst FROM affected)
+            AND t.averagerating IS NOT NULL AND t.numvotes > 0
+      );
+$$;
+
+-- Populate newly added name_rating table
+SELECT update_name_ratings();
+
+-- D8_popular_actors (task 1-D.8)
+
+-- Design decisions:
+--
+-- Made both suggested functions
+--
+-- Actors with NULL name_rating.rating are included at the end of the list
+--
+-- string_agg is used if actors are credited more than once on the same title
+-- (e.g. playing two characters in one title) to get only row per actor.
+
+DROP FUNCTION IF EXISTS get_popular_actors(character(10));
+DROP FUNCTION IF EXISTS get_popular_costars(character(10));
+
+-- The cast of one movie, most popular (highest name_rating) first.
+CREATE FUNCTION get_popular_actors(p_tconst character(10))
+RETURNS TABLE (
+    nconst      text,
+    primaryname text,
+    characters  text,
+    rating      numeric,
+    numvotes    integer,
+    num_titles  integer
+)
+LANGUAGE plpgsql STABLE AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM title t WHERE t.tconst = p_tconst) THEN
+        RAISE EXCEPTION 'No title with tconst %', p_tconst;
+    END IF;
+ 
+    RETURN QUERY
+    SELECT rtrim(p.nconst)::text,
+           p.primaryname::text,
+           string_agg(DISTINCT NULLIF(btrim(wo.characters), ''), ', '),
+           nr.rating,
+           nr.numvotes,
+           nr.num_titles
+    FROM worked_on wo
+    JOIN person p ON p.nconst = wo.nconst
+    LEFT JOIN name_rating nr ON nr.nconst = wo.nconst
+    WHERE wo.tconst = p_tconst
+      AND wo.category IN ('actor', 'actress')
+    GROUP BY p.nconst, p.primaryname, nr.rating, nr.numvotes, nr.num_titles
+    ORDER BY nr.rating DESC NULLS LAST, nr.numvotes DESC NULLS LAST, p.primaryname;
+END $$;
+ 
+-- An actor's co-stars most popular first.
+CREATE FUNCTION get_popular_costars(p_nconst character(10))
+RETURNS TABLE (
+    nconst        text,
+    primaryname   text,
+    shared_titles integer,
+    rating        numeric,
+    numvotes      integer,
+    num_titles    integer
+)
+LANGUAGE plpgsql STABLE AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM person pe WHERE pe.nconst = p_nconst) THEN
+        RAISE EXCEPTION 'No person with nconst %', p_nconst;
+    END IF;
+ 
+    RETURN QUERY
+    WITH my_titles AS (
+        SELECT DISTINCT wo.tconst
+        FROM worked_on wo
+        WHERE wo.nconst = p_nconst AND wo.category IN ('actor', 'actress')
+    )
+    SELECT rtrim(p.nconst)::text,
+           p.primaryname::text,
+           COUNT(DISTINCT wo2.tconst)::integer,
+           nr.rating,
+           nr.numvotes,
+           nr.num_titles
+    FROM worked_on wo2
+    JOIN my_titles mt ON mt.tconst = wo2.tconst
+    JOIN person p ON p.nconst = wo2.nconst
+    LEFT JOIN name_rating nr ON nr.nconst = wo2.nconst
+    WHERE wo2.category IN ('actor', 'actress')
+      AND wo2.nconst <> p_nconst
+    GROUP BY p.nconst, p.primaryname, nr.rating, nr.numvotes, nr.num_titles
+    ORDER BY nr.rating DESC NULLS LAST, nr.numvotes DESC NULLS LAST, p.primaryname;
+END $$;
+
+-- D9_similar_titles (task 1-D.9)
+--
+-- Design decisions:
+-- This functions uses shared genres and shared people to find similar titles.
+-- Genres and people are weighted 0.5 each by default but can be changed
+-- when calling the function.
+-- 
+-- This function would be too slow to use for having a similar/recommended
+-- titles feature on a movie page. For that a table that we load using the
+-- calculations in the function could be used.
+--
+-- Similarity measure: for each of genre-set and people-set, this uses
+-- the Jaccard similarity coefficient -- |A ∩ B| / |A ∪ B| -- the
+-- standard measure for how similar two sets are, ranging from 0 (no
+-- overlap) to 1 (identical sets). It's preferred here over a raw
+-- intersection count because it naturally normalizes for set size: two
+-- movies sharing 2 genres out of 2 total should score higher than two
+-- movies sharing 2 genres out of 8 total, and a raw count alone
+-- couldn't tell those apart.
+--
+-- The two Jaccard scores are combined into one similarity score via a
+-- weighted sum (p_genre_weight, p_people_weight)
+
+-- 1. Supporting indexes (move these to 1-E)
+CREATE INDEX IF NOT EXISTS title_genre_genre_idx ON title_genre (genre_name);
+CREATE INDEX IF NOT EXISTS worked_on_nconst_idx  ON worked_on (nconst);
+
+-- 2. Function
+DROP FUNCTION IF EXISTS get_similar_titles(character(10), integer, numeric, numeric);
+
+CREATE FUNCTION get_similar_titles(
+    p_tconst        character(10),
+    p_limit         integer DEFAULT 20,
+    p_genre_weight  numeric DEFAULT 0.5,
+    p_people_weight numeric DEFAULT 0.5
+)
+RETURNS TABLE (
+    tconst         text,
+    primarytitle   text,
+    score          numeric,
+    shared_genres  integer,
+    shared_people  integer
+)
+LANGUAGE plpgsql STABLE AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM title t WHERE t.tconst = p_tconst) THEN
+        RAISE EXCEPTION 'No title with tconst %', p_tconst;
+    END IF;
+
+    RETURN QUERY
+    WITH my_genres AS (
+        SELECT genre_name FROM title_genre WHERE title_genre.tconst = p_tconst
+    ),
+    my_people AS (
+        SELECT DISTINCT nconst FROM worked_on WHERE worked_on.tconst = p_tconst
+    ),
+    my_genre_count AS (SELECT COUNT(*) AS n FROM my_genres),
+    my_people_count AS (SELECT COUNT(*) AS n FROM my_people),
+
+    candidates AS (
+        SELECT DISTINCT tg.tconst
+        FROM title_genre tg
+        WHERE tg.genre_name IN (SELECT genre_name FROM my_genres)
+          AND tg.tconst <> p_tconst
+        UNION
+        SELECT DISTINCT wo.tconst
+        FROM worked_on wo
+        WHERE wo.nconst IN (SELECT nconst FROM my_people)
+          AND wo.tconst <> p_tconst
+    ),
+
+    genre_overlap AS (
+        SELECT tg.tconst, COUNT(*) AS shared
+        FROM title_genre tg
+        JOIN my_genres mg ON mg.genre_name = tg.genre_name
+        WHERE tg.tconst IN (SELECT c.tconst FROM candidates c)
+        GROUP BY tg.tconst
+    ),
+    candidate_genre_totals AS (
+        SELECT tg.tconst, COUNT(*) AS total
+        FROM title_genre tg
+        WHERE tg.tconst IN (SELECT c.tconst FROM candidates c)
+        GROUP BY tg.tconst
+    ),
+
+    people_overlap AS (
+        SELECT wo.tconst, COUNT(DISTINCT wo.nconst) AS shared
+        FROM worked_on wo
+        JOIN my_people mp ON mp.nconst = wo.nconst
+        WHERE wo.tconst IN (SELECT c.tconst FROM candidates c)
+        GROUP BY wo.tconst
+    ),
+    candidate_people_totals AS (
+        SELECT wo.tconst, COUNT(DISTINCT wo.nconst) AS total
+        FROM worked_on wo
+        WHERE wo.tconst IN (SELECT c.tconst FROM candidates c)
+        GROUP BY wo.tconst
+    ),
+
+    scored AS (
+        SELECT
+            c.tconst,
+            COALESCE(go.shared, 0) AS shared_genres,
+            COALESCE(po.shared, 0) AS shared_people,
+            CASE
+                WHEN (SELECT n FROM my_genre_count) + COALESCE(cgt.total, 0) - COALESCE(go.shared, 0) = 0
+                    THEN 0
+                ELSE COALESCE(go.shared, 0)::numeric
+                     / ((SELECT n FROM my_genre_count) + COALESCE(cgt.total, 0) - COALESCE(go.shared, 0))
+            END AS jaccard_genre,
+            CASE
+                WHEN (SELECT n FROM my_people_count) + COALESCE(cpt.total, 0) - COALESCE(po.shared, 0) = 0
+                    THEN 0
+                ELSE COALESCE(po.shared, 0)::numeric
+                     / ((SELECT n FROM my_people_count) + COALESCE(cpt.total, 0) - COALESCE(po.shared, 0))
+            END AS jaccard_people
+        FROM candidates c
+        LEFT JOIN genre_overlap          go  ON go.tconst  = c.tconst
+        LEFT JOIN candidate_genre_totals cgt ON cgt.tconst = c.tconst
+        LEFT JOIN people_overlap         po  ON po.tconst  = c.tconst
+        LEFT JOIN candidate_people_totals cpt ON cpt.tconst = c.tconst
+    )
+
+    SELECT rtrim(s.tconst)::text,
+           t.primarytitle,
+           ROUND(p_genre_weight * s.jaccard_genre + p_people_weight * s.jaccard_people, 4),
+           s.shared_genres::integer,
+           s.shared_people::integer
+    FROM scored s
+    JOIN title t ON t.tconst = s.tconst
+    ORDER BY (p_genre_weight * s.jaccard_genre + p_people_weight * s.jaccard_people) DESC,
+             s.shared_people DESC, s.shared_genres DESC, t.primarytitle
+    LIMIT p_limit;
+END $$;
