@@ -54,6 +54,9 @@ SELECT * FROM structured_string_search(NULL, 'a young wizard', NULL, NULL);
 SELECT * FROM get_search_history((SELECT user_id FROM tmp_test));
 ROLLBACK;
 
+-- D5
+SELECT * FROM structured_name_search(NULL, 'actor', 'dune', NULL);
+
 -- D6
 SELECT * FROM co_players('Timothée Chalamet') LIMIT 10;
 

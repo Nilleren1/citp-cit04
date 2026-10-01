@@ -1,7 +1,7 @@
 -- D_functions.sql
 -- This script creates custom functions for the database.
 
--- D1_framework_functions.sql (task 1-D.1)
+-- D1_framework_functions (task 1-D.1)
 
 -- 0. Wipe-out of old versions
 DROP FUNCTION IF EXISTS create_user(varchar, text);
@@ -123,7 +123,7 @@ BEGIN
     IF p_status NOT IN ('watched', 'watchlist') THEN
         RAISE EXCEPTION 'Invalid status "%": must be watched or watchlist', p_status;
     END IF;
- 
+
     INSERT INTO bookmark_title (user_id, tconst, status)
     VALUES (p_user_id, p_tconst, p_status);
 EXCEPTION
@@ -141,7 +141,7 @@ BEGIN
     IF p_status NOT IN ('watched', 'watchlist') THEN
         RAISE EXCEPTION 'Invalid status "%": must be watched or watchlist', p_status;
     END IF;
- 
+
     UPDATE bookmark_title SET status = p_status
     WHERE user_id = p_user_id AND tconst = p_tconst;
     RETURN FOUND;
@@ -246,11 +246,11 @@ BEGIN
     IF p_search_string IS NULL OR btrim(p_search_string) = '' THEN
         RAISE EXCEPTION 'Search string must not be empty';
     END IF;
- 
+
     IF p_user_id IS NOT NULL THEN
         PERFORM log_search(p_user_id, p_search_string);
     END IF;
- 
+
     RETURN QUERY
     SELECT rtrim(t.tconst)::text, t.primarytitle
     FROM title t
@@ -288,29 +288,29 @@ BEGIN
     IF p_rating IS NULL OR p_rating < 1 OR p_rating > 10 THEN
         RAISE EXCEPTION 'Rating must be an integer between 1 and 10, got %', p_rating;
     END IF;
- 
+
     SELECT t.averagerating, t.numvotes INTO v_old_avg, v_votes
     FROM title t
     WHERE t.tconst = p_tconst
     FOR UPDATE;
- 
+
     IF NOT FOUND THEN
         RAISE EXCEPTION 'No title with tconst %', p_tconst;
     END IF;
- 
+
     v_votes := COALESCE(v_votes, 0);
- 
+
     SELECT r.rating INTO v_prev_rating
     FROM rating r
     WHERE r.user_id = p_user_id AND r.tconst = p_tconst
     FOR UPDATE;
- 
+
     IF FOUND THEN
         v_is_new := false;
         v_new_avg := ROUND(
             (COALESCE(v_old_avg, 0) * v_votes - v_prev_rating + p_rating)
             / v_votes, 1);
- 
+
         UPDATE rating AS r
         SET rating = p_rating,
             review = COALESCE(p_review, r.review)
@@ -322,12 +322,12 @@ BEGIN
             (COALESCE(v_old_avg, 0) * v_votes + p_rating)
             / (v_votes + 1), 1);
         v_votes := v_votes + 1;
- 
+
         INSERT INTO rating AS r (user_id, tconst, rating, review)
         VALUES (p_user_id, p_tconst, p_rating, p_review)
         RETURNING r.review, r.created_at INTO v_review, v_rated_at;
     END IF;
- 
+
     UPDATE title AS t
     SET averagerating = v_new_avg, numvotes = v_votes
     WHERE t.tconst = p_tconst;
