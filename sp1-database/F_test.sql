@@ -217,3 +217,24 @@ SELECT * FROM word_to_words(ARRAY['xyzxyzxyz', 'space']);
 -- =====================================================================
 -- 1-D.14  Weighted indexing               (to be added)
 -- =====================================================================
+
+-- Weights of a common and a rarer word (expected: "the" has a much lower idf)
+SELECT DISTINCT word, idf FROM word_weight WHERE word IN ('the', 'space', 'alien');
+
+-- -- Weighted search with several keywords
+SELECT * FROM weighted_search(ARRAY['space', 'alien', 'ship'], 10);
+
+-- -- A common word adds almost nothing to the ranking
+SELECT * FROM weighted_search(ARRAY['space', 'alien', 'ship', 'the'], 10);
+
+-- -- No match (expected: no rows)
+SELECT * FROM weighted_search(ARRAY['xyzxyzxyz']);
+
+-- -- Empty input is rejected (expected: NOTICE "OK, rejected: ...")
+ DO $$
+ BEGIN
+     PERFORM weighted_search(ARRAY['', ' ']);
+     RAISE NOTICE 'FAIL: empty keyword list was accepted';
+ EXCEPTION WHEN raise_exception THEN
+     RAISE NOTICE 'OK, rejected: %', SQLERRM;
+ END $$;
