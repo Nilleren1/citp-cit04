@@ -37,6 +37,28 @@ Close pgAdmin, Navicat and other connections to `imdb` first.
 
 ## Running the scripts
 
+Run the scripts in this order on a fresh working copy:
+
 ```
 psql -U postgres -d imdb -f sp1-database/B2_build_movie_db.sql
+psql -U postgres -d imdb -f sp1-database/C2_build_framework_db.sql
+psql -U postgres -d imdb -f sp1-database/D_functions.sql
+psql -U postgres -d imdb -f sp1-database/E_indexes.sql
 ```
+
+| Script | Creates |
+|---|---|
+| B2 | Movie tables, migrates the source data, drops the source tables |
+| C2 | Framework tables (users, ratings, bookmarks, search history) |
+| D  | Views and functions (the database API) |
+| E  | Indexes |
+
+## Running the tests
+
+```
+psql -U postgres -d imdb -a -f sp1-database/F_test.sql > sp1-database/F_test_output.txt 2>&1
+```
+
+`-a` prints each statement above its result, and `2>&1` also captures
+notices and errors. Tests that modify data run inside `BEGIN ... ROLLBACK`,
+so the database is unchanged afterwards.
