@@ -879,12 +879,6 @@ END $$;
 -- The two Jaccard scores are combined into one similarity score via a
 -- weighted sum (p_genre_weight, p_people_weight)
 
--- 1. Supporting indexes (move these to 1-E)
-CREATE INDEX IF NOT EXISTS title_genre_genre_idx ON title_genre (genre_name);
-
-CREATE INDEX IF NOT EXISTS worked_on_nconst_idx ON worked_on (nconst);
-
--- 2. Function
 DROP FUNCTION IF EXISTS get_similar_titles(character(10), integer, numeric, numeric);
 
 CREATE FUNCTION get_similar_titles(
@@ -1198,5 +1192,119 @@ BEGIN
     JOIN title t        ON t.tconst = ww.tconst
     GROUP BY t.tconst, t.primarytitle
     ORDER BY r DESC, m DESC, t.primarytitle
+-- D15_own_ideas (task 1-D.15)
+
+DROP FUNCTION IF EXISTS recommend_from_bookmarks(integer, integer, integer, integer);
+DROP FUNCTION IF EXISTS recommend_from_ratings(integer, integer, integer, integer, integer);
+DROP FUNCTION IF EXISTS get_trending_searches(integer, integer);
+
+-- Recommendations from a user's bookmarked titles (watched or watchlist).
+CREATE FUNCTION recommend_from_bookmarks(
+    p_user_id        integer,
+    p_limit          integer DEFAULT 10,
+    p_max_seeds      integer DEFAULT 20,
+    p_per_seed_limit integer DEFAULT 50
+)
+RETURNS TABLE (tconst text, primarytitle text, score numeric, source_count integer)
+LANGUAGE plpgsql STABLE AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM app_user au WHERE au.user_id = p_user_id) THEN
+        RAISE EXCEPTION 'No user with user_id %', p_user_id;
+    END IF;
+
+    RETURN QUERY
+    WITH seeds AS (
+        SELECT bt.tconst
+        FROM bookmark_title bt
+        WHERE bt.user_id = p_user_id
+        ORDER BY bt.created_at DESC
+        LIMIT p_max_seeds
+    ),
+    candidates AS (
+        SELECT gm.tconst, gm.primarytitle, gm.score
+        FROM seeds s
+        CROSS JOIN LATERAL get_similar_titles(s.tconst, p_per_seed_limit) gm
+    ),
+    excluded AS (
+        SELECT bt2.tconst FROM bookmark_title bt2 WHERE bt2.user_id = p_user_id
+        UNION
+        SELECT r.tconst FROM rating r WHERE r.user_id = p_user_id
+    )
+    SELECT c.tconst, c.primarytitle,
+           SUM(c.score)::numeric AS score,
+           COUNT(*)::integer AS source_count
+    FROM candidates c
+    WHERE c.tconst NOT IN (SELECT e.tconst FROM excluded e)
+    GROUP BY c.tconst, c.primarytitle
+    ORDER BY SUM(c.score) DESC, COUNT(*) DESC, c.primarytitle
+    LIMIT p_limit;
+END $$;
+
+-- Recommendations from a user's ratings, seeded only from titles rated
+-- at or above p_min_rating and weighted by how highly each was rated.
+CREATE FUNCTION recommend_from_ratings(
+    p_user_id        integer,
+    p_limit          integer DEFAULT 10,
+    p_min_rating     integer DEFAULT 7,
+    p_max_seeds      integer DEFAULT 20,
+    p_per_seed_limit integer DEFAULT 50
+)
+RETURNS TABLE (tconst text, primarytitle text, score numeric, source_count integer)
+LANGUAGE plpgsql STABLE AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM app_user au WHERE au.user_id = p_user_id) THEN
+        RAISE EXCEPTION 'No user with user_id %', p_user_id;
+    END IF;
+
+    IF p_min_rating < 1 OR p_min_rating > 10 THEN
+        RAISE EXCEPTION 'p_min_rating must be between 1 and 10, got %', p_min_rating;
+    END IF;
+
+    RETURN QUERY
+    WITH seeds AS (
+        SELECT r.tconst, r.rating
+        FROM rating r
+        WHERE r.user_id = p_user_id AND r.rating >= p_min_rating
+        ORDER BY r.rating DESC, r.created_at DESC
+        LIMIT p_max_seeds
+    ),
+    candidates AS (
+        SELECT gm.tconst, gm.primarytitle,
+               gm.score * (s.rating / 10.0) AS weighted_score
+        FROM seeds s
+        CROSS JOIN LATERAL get_similar_titles(s.tconst, p_per_seed_limit) gm
+    ),
+    excluded AS (
+        SELECT bt.tconst FROM bookmark_title bt WHERE bt.user_id = p_user_id
+        UNION
+        SELECT r2.tconst FROM rating r2 WHERE r2.user_id = p_user_id
+    )
+    SELECT c.tconst, c.primarytitle,
+           ROUND(SUM(c.weighted_score), 4)::numeric AS score,
+           COUNT(*)::integer AS source_count
+    FROM candidates c
+    WHERE c.tconst NOT IN (SELECT e.tconst FROM excluded e)
+    GROUP BY c.tconst, c.primarytitle
+    ORDER BY SUM(c.weighted_score) DESC, COUNT(*) DESC, c.primarytitle
+    LIMIT p_limit;
+END $$;
+
+-- Trending searches across ALL users
+CREATE FUNCTION get_trending_searches(p_limit integer DEFAULT 10, p_days integer DEFAULT 7)
+RETURNS TABLE (query text, search_count integer, distinct_users integer)
+LANGUAGE plpgsql STABLE AS $$
+BEGIN
+    IF p_limit IS NULL OR p_limit < 1 THEN
+        RAISE EXCEPTION 'p_limit must be a positive integer, got %', p_limit;
+    END IF;
+
+    RETURN QUERY
+    SELECT lower(btrim(sh.query)) AS query,
+           COUNT(*)::integer AS search_count,
+           COUNT(DISTINCT sh.user_id)::integer AS distinct_users
+    FROM search_history sh
+    WHERE p_days IS NULL OR sh.created_at >= now() - (p_days || ' days')::interval
+    GROUP BY lower(btrim(sh.query))
+    ORDER BY COUNT(DISTINCT sh.user_id) DESC, COUNT(*) DESC, lower(btrim(sh.query))
     LIMIT p_limit;
 END $$;
