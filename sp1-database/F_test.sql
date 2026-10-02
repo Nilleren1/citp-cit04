@@ -55,6 +55,9 @@ SELECT * FROM get_search_history((SELECT user_id FROM tmp_test));
 ROLLBACK;
 
 -- D5
+SELECT * FROM name_search('chalamet');
+SELECT * FROM name_search('CHALAMET');
+
 SELECT * FROM structured_name_search(NULL, 'actor', 'dune', NULL);
 
 -- D6
@@ -92,3 +95,6 @@ SELECT * FROM get_similar_titles('tt2209418', 10, 0.0, 1.0);
 -- D10
 SELECT * FROM person_words('Ice Cube');
 SELECT * FROM person_words('Ice CUbe', 25);
+
+-- D13
+SELECT * FROM word_to_words(ARRAY['space']);

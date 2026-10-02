@@ -981,3 +981,37 @@ BEGIN
     ORDER BY COUNT(DISTINCT tw.tconst) DESC, tw.word
     LIMIT p_limit;
 END $$;
+
+-- D13_word_to_words   (task 1-D.13)
+ CREATE OR REPLACE FUNCTION word_to_words(p_keywords text[],
+ p_limit    integer DEFAULT 20,
+ p_user_id  integer DEFAULT NULL)
+RETURNS TABLE (word text, frequency bigint)
+LANGUAGE plpgsql AS $$
+BEGIN
+    IF p_user_id IS NOT NULL THEN
+        PERFORM log_search(p_user_id, array_to_string(p_keywords, ' '));
+    END IF;
+
+    RETURN QUERY
+    WITH kw AS (                                   -- the query words, cleaned
+        SELECT DISTINCT lower(btrim(k)) AS k
+        FROM unnest(p_keywords) AS k
+        WHERE btrim(k) <> ''
+    ),
+    matching AS (                                  -- step 1: titles with ALL keywords
+        SELECT tw.tconst
+        FROM title_word tw
+        JOIN kw ON tw.word = kw.k
+        GROUP BY tw.tconst
+        HAVING count(DISTINCT tw.word) = (SELECT count(*) FROM kw)
+    )
+    SELECT tw.word, count(DISTINCT tw.tconst) AS frequency   -- step 2: count words
+    FROM title_word tw
+    JOIN matching m ON m.tconst = tw.tconst
+    WHERE tw.word NOT IN (SELECT k FROM kw)                  -- leave out the query words
+      AND tw.word ~ '[[:alnum:]]'                                      -- leave out empty words
+    GROUP BY tw.word
+    ORDER BY frequency DESC, tw.word                          -- step 3: most frequent first
+    LIMIT p_limit;
+END $$;
