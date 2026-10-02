@@ -10,11 +10,8 @@
 -- The whole script runs as one transaction: if any statement fails,
 -- nothing is changed, and the source tables are left intact.
 -- Run it on a fresh copy of the source data.
--- =====================================================================
 
 BEGIN;
-
-
 -- =====================================================================
 -- 1. DROP target tables
 -- =====================================================================
@@ -31,12 +28,10 @@ DROP TABLE IF EXISTS title_genre        CASCADE;
 DROP TABLE IF EXISTS genre              CASCADE;
 DROP TABLE IF EXISTS title              CASCADE;
 
-
 -- =====================================================================
 -- 2. CREATE target tables
 -- =====================================================================
-
--- title ---------------------------------------------------------------
+-- title
 CREATE TABLE title (
     tconst          character(10)   PRIMARY KEY,
     titletype       varchar(20),
@@ -52,19 +47,19 @@ CREATE TABLE title (
     poster          varchar(180)
 );
 
--- genre ---------------------------------------------------------------
+-- genre
 CREATE TABLE genre (
     name            varchar(50)     PRIMARY KEY
 );
 
--- titleGenre ----------------------------------------------------------
+-- titleGenre
 CREATE TABLE title_genre (
     tconst          character(10)   NOT NULL REFERENCES title(tconst),
     genre_name      varchar(50)     NOT NULL REFERENCES genre(name),
     PRIMARY KEY (tconst, genre_name)
 );
 
--- person --------------------------------------------------------------
+-- person
 CREATE TABLE person (
     nconst          character(10)   PRIMARY KEY,
     primaryname     varchar(256),
@@ -72,19 +67,19 @@ CREATE TABLE person (
     deathyear       integer
 );
 
--- profession ----------------------------------------------------------
+-- profession
 CREATE TABLE profession (
     name            varchar(50)     PRIMARY KEY
 );
 
--- personProfession ----------------------------------------------------
+-- personProfession
 CREATE TABLE person_profession (
     nconst          character(10)   NOT NULL REFERENCES person(nconst),
     profession_name varchar(50)     NOT NULL REFERENCES profession(name),
     PRIMARY KEY (nconst, profession_name)
 );
 
--- workedOn ------------------------------------------------------------
+-- workedOn
 CREATE TABLE worked_on (
     tconst          character(10)   NOT NULL REFERENCES title(tconst),
     ordering        integer         NOT NULL,
@@ -95,7 +90,7 @@ CREATE TABLE worked_on (
     PRIMARY KEY (tconst, ordering)
 );
 
--- isEpisode (recursive relationship on title) -------------------------
+-- episode
 CREATE TABLE episode (
     tconst          character(10)   PRIMARY KEY REFERENCES title(tconst),
     series_tconst   character(10)   NOT NULL REFERENCES title(tconst),
@@ -103,17 +98,12 @@ CREATE TABLE episode (
     episodenumber   integer
 );
 
--- wordIndex -----------------------------------------------------------
--- Words use the "C" collation (plain byte order). The Windows locale
--- (e.g. Danish_Denmark.1252) partly ignores apostrophes and hyphens when
--- comparing, which made the B-tree index on word inconsistent: words
--- like "victoria's" were in the table but not found through the index.
--- Words never need language-specific sorting, so "C" is safe and faster.
+-- wordIndex
 CREATE TABLE word_index (
     word            text COLLATE "C" PRIMARY KEY
 );
 
--- contains: one row per word per field it appears in ------------------
+-- title_word
 CREATE TABLE title_word (
     tconst          character(10)   NOT NULL REFERENCES title(tconst),
     word            text COLLATE "C" NOT NULL,
@@ -122,7 +112,7 @@ CREATE TABLE title_word (
     PRIMARY KEY (tconst, word, field)
 );
 
--- altTitle / has ------------------------------------------------------
+-- altTitle
 CREATE TABLE alt_title (
     tconst          character(10)   NOT NULL REFERENCES title(tconst),
     ordering        integer         NOT NULL,
@@ -135,11 +125,9 @@ CREATE TABLE alt_title (
     PRIMARY KEY (tconst, ordering)
 );
 
-
 -- =====================================================================
 -- 3. MIGRATE data from the source tables into the new model
 -- =====================================================================
-
 -- 3.1 title: title_basics + title_ratings + (plot, poster) from omdb_data
 INSERT INTO title (tconst, titletype, primarytitle, originaltitle, isadult,
                    startyear, endyear, runtimeminutes,
@@ -158,7 +146,7 @@ SELECT
                                                                 AS runtimeminutes,
     tr.averagerating,
     tr.numvotes,
-    NULLIF(od.plot, 'N/A')                                      AS plot,    -- OMDb's 'N/A' becomes NULL
+    NULLIF(od.plot, 'N/A')                                      AS plot,
     NULLIF(od.poster, 'N/A')                                    AS poster
 FROM title_basics tb
 FULL OUTER JOIN omdb_data od     ON od.tconst = tb.tconst
@@ -261,7 +249,7 @@ INSERT INTO worked_on (tconst, ordering, nconst, category, job, characters)
 SELECT tconst, -rn, nconst, category, NULL, NULL
 FROM crew_new;
 
--- 3.7 episode (isEpisode): both the episode and its series must exist
+-- 3.7 episode: both the episode and its series must exist
 INSERT INTO episode (tconst, series_tconst, seasonnumber, episodenumber)
 SELECT te.tconst, te.parenttconst, te.seasonnumber, te.episodenumber
 FROM title_episode te
@@ -291,12 +279,10 @@ SELECT ta.titleid, ta.ordering, ta.title, ta.region, ta.language,
 FROM title_akas ta
 WHERE EXISTS (SELECT 1 FROM title t WHERE t.tconst = ta.titleid);
 
-
 -- =====================================================================
 -- 4. DROP the source tables
 -- =====================================================================
--- Inside the transaction, so they are only dropped if every step above
--- succeeded.
+-- Inside the transaction, so they are only dropped if every step above succeeded.
 
 DROP TABLE IF EXISTS title_akas;
 DROP TABLE IF EXISTS title_principals;
@@ -309,22 +295,3 @@ DROP TABLE IF EXISTS omdb_data;
 DROP TABLE IF EXISTS wi;
 
 COMMIT;
-
-
--- =====================================================================
--- 5. Row counts per table -- run manually after the build
--- =====================================================================
--- The source tables are gone at this point, so compare against the
--- counts taken on imdb_source before running the script.
---
--- SELECT 'title'             AS t, count(*) FROM title
--- UNION ALL SELECT 'genre',             count(*) FROM genre
--- UNION ALL SELECT 'title_genre',       count(*) FROM title_genre
--- UNION ALL SELECT 'person',            count(*) FROM person
--- UNION ALL SELECT 'profession',        count(*) FROM profession
--- UNION ALL SELECT 'person_profession', count(*) FROM person_profession
--- UNION ALL SELECT 'worked_on',         count(*) FROM worked_on
--- UNION ALL SELECT 'episode',           count(*) FROM episode
--- UNION ALL SELECT 'word_index',        count(*) FROM word_index
--- UNION ALL SELECT 'title_word',        count(*) FROM title_word
--- UNION ALL SELECT 'alt_title',         count(*) FROM alt_title;

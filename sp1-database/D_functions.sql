@@ -1,7 +1,11 @@
+-- =====================================================================
 -- D_functions.sql
+-- =====================================================================
 -- This script creates custom functions for the database.
 
+-- =====================================================================
 -- D1_framework_functions (task 1-D.1)
+-- =====================================================================
 
 -- 0. Wipe-out of old versions
 DROP FUNCTION IF EXISTS create_user (varchar, text);
@@ -257,7 +261,9 @@ LANGUAGE sql STABLE AS $$
     ORDER BY r.created_at DESC, t.primarytitle;
 $$;
 
+-- =====================================================================
 -- D2_string_search (task 1-D.2)
+-- =====================================================================
 
 DROP FUNCTION IF EXISTS string_search (text, integer);
 
@@ -281,7 +287,9 @@ BEGIN
     ORDER BY t.primarytitle;
 END $$;
 
+-- =====================================================================
 -- D3_title_rating (task 1-D.3)
+-- =====================================================================
 
 DROP FUNCTION IF EXISTS rate ( integer, character(10), integer, text );
 
@@ -416,8 +424,9 @@ BEGIN
     RETURN true;
 END $$;
 
+-- =====================================================================
 -- D4_structured_search_functions (task 1-D.4)
---
+-- =====================================================================
 -- Design decisions:
 -- You can filter on any combination of the four parameters: title, plot,
 -- characters and person names. You don't have to include all four parameters.
@@ -495,10 +504,11 @@ BEGIN
     ORDER BY t.primarytitle;
 END $$;
 
+-- =====================================================================
 -- D5_name_search (task 1-D.5)
 -- =====================================================================
 -- name_search(search string, user)
--- ---------------------------------------------------------------------
+--
 -- Returns every person whose name contains the search string, ranked:
 --   1. exact name matches first
 --   2. then names that start with the search string
@@ -546,9 +556,8 @@ BEGIN
              p.primaryname;
 END $$;
 
--- ---------------------------------------------------------------------
 -- structured_name_search(name, profession, title, character, user)
--- ---------------------------------------------------------------------
+--
 -- Finds persons matching all the criteria that are given. Empty or NULL
 -- parameters are ignored, but at least one must be given.
 --   p_name       : substring of the person's name
@@ -572,8 +581,8 @@ DECLARE
     v_profession text := lower(NULLIF(btrim(p_profession), ''));
     v_title      text := lower(NULLIF(btrim(p_title), ''));
     v_character  text := lower(NULLIF(btrim(p_character), ''));
-    v_tconsts    character(10)[];   -- titles matching p_title
-    v_nconsts    character(10)[];   -- persons credited on those titles
+    v_tconsts    character(10)[];
+    v_nconsts    character(10)[];
 BEGIN
     IF v_name IS NULL AND v_profession IS NULL
        AND v_title IS NULL AND v_character IS NULL THEN
@@ -603,7 +612,7 @@ BEGIN
         WHERE position(v_title IN lower(t.primarytitle)) > 0;
 
         IF v_tconsts IS NULL THEN
-            RETURN;                      -- no title matches
+            RETURN;
         END IF;
     END IF;
 
@@ -615,7 +624,7 @@ BEGIN
                OR position(v_character IN lower(w.characters)) > 0);
 
         IF v_nconsts IS NULL THEN
-            RETURN;                      -- nobody credited that way
+            RETURN;
         END IF;
     END IF;
 
@@ -636,6 +645,7 @@ END $$;
 -- =====================================================================
 --  D.6 Co-players (task 1-D.6)
 -- =====================================================================
+
 -- collects the most important columns from title, principals and name in a single virtual table.
 CREATE OR REPLACE VIEW title_person AS
 SELECT t.tconst, t.primarytitle, t.startyear, t.titletype, p.nconst, p.primaryname, w.category, w.job, w.characters, w.ordering
@@ -659,7 +669,9 @@ LANGUAGE sql AS $$
     ORDER BY frequency DESC, other.primaryname;
 $$;
 
+-- =====================================================================
 -- D7_name_rating (task 1-D.7)
+-- =====================================================================
 
 -- Design decisions:
 -- Calculate the rating for all persons not just actors.
@@ -755,7 +767,9 @@ $$;
 -- Populate newly added name_rating table
 SELECT update_name_ratings ();
 
+-- =====================================================================
 -- D8_popular_actors (task 1-D.8)
+-- =====================================================================
 
 -- Design decisions:
 --
@@ -840,8 +854,10 @@ BEGIN
     ORDER BY nr.rating DESC NULLS LAST, nr.numvotes DESC NULLS LAST, p.primaryname;
 END $$;
 
+-- =====================================================================
 -- D9_similar_titles (task 1-D.9)
---
+-- =====================================================================
+
 -- Design decisions:
 -- This functions uses shared genres and shared people to find similar titles.
 -- Genres and people are weighted 0.5 each by default but can be changed
@@ -989,7 +1005,9 @@ SELECT rtrim(s.tconst)::text,
 
 END $$;
 
+-- =====================================================================
 -- D10_person_words   (task 1-D.10)
+-- =====================================================================
 
 DROP FUNCTION IF EXISTS person_words (text, integer);
 
@@ -1026,8 +1044,11 @@ BEGIN
     LIMIT p_limit;
 END $$;
 
--- D13_word_to_words   (task 1-D.13)
-CREATE OR REPLACE FUNCTION word_to_words(p_keywords text[],
+-- =====================================================================
+-- D13_word_to_words (task 1-D.13)
+-- =====================================================================
+
+ CREATE OR REPLACE FUNCTION word_to_words(p_keywords text[],
  p_limit    integer DEFAULT 20,
  p_user_id  integer DEFAULT NULL)
 RETURNS TABLE (word text, frequency bigint)
@@ -1038,25 +1059,25 @@ BEGIN
     END IF;
 
     RETURN QUERY
-    WITH kw AS (                                   -- the query words, cleaned
+    WITH kw AS (
         SELECT DISTINCT lower(btrim(k)) AS k
         FROM unnest(p_keywords) AS k
         WHERE btrim(k) <> ''
     ),
-    matching AS (                                  -- step 1: titles with ALL keywords
+    matching AS (
         SELECT tw.tconst
         FROM title_word tw
         JOIN kw ON tw.word = kw.k
         GROUP BY tw.tconst
         HAVING count(DISTINCT tw.word) = (SELECT count(*) FROM kw)
     )
-    SELECT tw.word, count(DISTINCT tw.tconst) AS frequency   -- step 2: count words
+    SELECT tw.word, count(DISTINCT tw.tconst) AS frequency
     FROM title_word tw
     JOIN matching m ON m.tconst = tw.tconst
-    WHERE tw.word NOT IN (SELECT k FROM kw)                  -- leave out the query words
-      AND tw.word ~ '[[:alnum:]]'                                      -- leave out empty words
+    WHERE tw.word NOT IN (SELECT k FROM kw)
+      AND tw.word ~ '[[:alnum:]]'
     GROUP BY tw.word
-    ORDER BY frequency DESC, tw.word                          -- step 3: most frequent first
+    ORDER BY frequency DESC, tw.word
     LIMIT p_limit;
 END $$;
 
