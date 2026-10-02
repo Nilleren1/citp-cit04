@@ -1,15 +1,21 @@
+-- =====================================================================
 -- C2_build_framework_db.sql
+-- =====================================================================
 
 BEGIN;
 
+-- =====================================================================
 -- 1. DROP framework tables
+-- =====================================================================
 DROP TABLE IF EXISTS search_history   CASCADE;
 DROP TABLE IF EXISTS rating           CASCADE;
 DROP TABLE IF EXISTS bookmark_title   CASCADE;
 DROP TABLE IF EXISTS bookmark_person  CASCADE;
 DROP TABLE IF EXISTS app_user         CASCADE;
 
+-- =====================================================================
 -- 2. CREATE framework tables
+-- =====================================================================
 
 -- app_user
 CREATE TABLE app_user (
