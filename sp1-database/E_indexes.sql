@@ -8,6 +8,10 @@
 CREATE INDEX IF NOT EXISTS title_genre_genre_idx ON title_genre (genre_name);
 CREATE INDEX IF NOT EXISTS worked_on_nconst_idx  ON worked_on (nconst);
 
+-- For D.10
+-- Supports person_words, which filters person by lower(primaryname).
+CREATE INDEX IF NOT EXISTS person_lower_primaryname_idx ON person (lower(primaryname));
+
 -- For D.15
 -- Supports get_trending_searches, which filters search_history by created_at.
 CREATE INDEX IF NOT EXISTS search_history_created_at_idx ON search_history (created_at);
