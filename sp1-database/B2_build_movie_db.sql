@@ -1,6 +1,3 @@
--- B2_build_movie_db.sql
--- This script creates the movie database and its tables.
-
 -- =====================================================================
 -- B2_build_movie_db.sql
 -- =====================================================================
@@ -107,14 +104,19 @@ CREATE TABLE episode (
 );
 
 -- wordIndex -----------------------------------------------------------
+-- Words use the "C" collation (plain byte order). The Windows locale
+-- (e.g. Danish_Denmark.1252) partly ignores apostrophes and hyphens when
+-- comparing, which made the B-tree index on word inconsistent: words
+-- like "victoria's" were in the table but not found through the index.
+-- Words never need language-specific sorting, so "C" is safe and faster.
 CREATE TABLE word_index (
-    word            text            PRIMARY KEY
+    word            text COLLATE "C" PRIMARY KEY
 );
 
 -- contains: one row per word per field it appears in ------------------
 CREATE TABLE title_word (
     tconst          character(10)   NOT NULL REFERENCES title(tconst),
-    word            text            NOT NULL,
+    word            text COLLATE "C" NOT NULL,
     field           character(1)    NOT NULL,
     lexeme          text,
     PRIMARY KEY (tconst, word, field)
@@ -326,4 +328,3 @@ COMMIT;
 -- UNION ALL SELECT 'word_index',        count(*) FROM word_index
 -- UNION ALL SELECT 'title_word',        count(*) FROM title_word
 -- UNION ALL SELECT 'alt_title',         count(*) FROM alt_title;
-
