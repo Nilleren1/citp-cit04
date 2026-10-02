@@ -8,21 +8,43 @@
 -- =====================================================================
 
 -- 0. Wipe-out of old versions
-DROP FUNCTION IF EXISTS create_user(varchar, text);
-DROP FUNCTION IF EXISTS get_user(varchar);
-DROP FUNCTION IF EXISTS update_password(integer, text);
-DROP FUNCTION IF EXISTS delete_user(integer);
-DROP FUNCTION IF EXISTS add_person_bookmark(integer, character(10));
-DROP FUNCTION IF EXISTS remove_person_bookmark(integer, character(10));
-DROP FUNCTION IF EXISTS get_person_bookmarks(integer);
-DROP FUNCTION IF EXISTS add_title_bookmark(integer, character(10), varchar);
-DROP FUNCTION IF EXISTS update_title_bookmark_status(integer, character(10), varchar);
-DROP FUNCTION IF EXISTS remove_title_bookmark(integer, character(10));
-DROP FUNCTION IF EXISTS get_title_bookmarks(integer, varchar);
-DROP FUNCTION IF EXISTS log_search(integer, text);
-DROP FUNCTION IF EXISTS get_search_history(integer, integer);
-DROP FUNCTION IF EXISTS clear_search_history(integer);
-DROP FUNCTION IF EXISTS get_user_ratings(integer);
+DROP FUNCTION IF EXISTS create_user (varchar, text);
+
+DROP FUNCTION IF EXISTS get_user (varchar);
+
+DROP FUNCTION IF EXISTS update_password (integer, text);
+
+DROP FUNCTION IF EXISTS delete_user (integer);
+
+DROP FUNCTION IF EXISTS add_person_bookmark (integer, character(10));
+
+DROP FUNCTION IF EXISTS remove_person_bookmark (integer, character(10));
+
+DROP FUNCTION IF EXISTS get_person_bookmarks (integer);
+
+DROP FUNCTION IF EXISTS add_title_bookmark (
+    integer,
+    character(10),
+    varchar
+);
+
+DROP FUNCTION IF EXISTS update_title_bookmark_status (
+    integer,
+    character(10),
+    varchar
+);
+
+DROP FUNCTION IF EXISTS remove_title_bookmark (integer, character(10));
+
+DROP FUNCTION IF EXISTS get_title_bookmarks (integer, varchar);
+
+DROP FUNCTION IF EXISTS log_search (integer, text);
+
+DROP FUNCTION IF EXISTS get_search_history (integer, integer);
+
+DROP FUNCTION IF EXISTS clear_search_history (integer);
+
+DROP FUNCTION IF EXISTS get_user_ratings (integer);
 
 -- 1. User management
 -- Add
@@ -243,7 +265,7 @@ $$;
 -- D2_string_search (task 1-D.2)
 -- =====================================================================
 
-DROP FUNCTION IF EXISTS string_search(text, integer);
+DROP FUNCTION IF EXISTS string_search (text, integer);
 
 CREATE FUNCTION string_search(p_search_string text, p_user_id integer DEFAULT NULL)
 RETURNS TABLE (tconst text, primarytitle text)
@@ -269,7 +291,7 @@ END $$;
 -- D3_title_rating (task 1-D.3)
 -- =====================================================================
 
-DROP FUNCTION IF EXISTS rate(integer, character(10), integer, text);
+DROP FUNCTION IF EXISTS rate ( integer, character(10), integer, text );
 
 CREATE FUNCTION rate(p_user_id integer, p_tconst character(10),
                      p_rating integer, p_review text DEFAULT NULL)
@@ -351,7 +373,7 @@ BEGIN
            v_is_new, v_rated_at, v_new_avg::numeric, v_votes;
 END $$;
 
-DROP FUNCTION IF EXISTS delete_rating(integer, character(10));
+DROP FUNCTION IF EXISTS delete_rating (integer, character(10));
 
 CREATE FUNCTION delete_rating(p_user_id integer, p_tconst character(10))
 RETURNS boolean
@@ -432,7 +454,13 @@ END $$;
 --
 -- tconst is stored as CHAR(10), so rtrim() removes any trailing padding spaces before returning it as text.
 
-DROP FUNCTION IF EXISTS structured_string_search(text, text, text, text, integer);
+DROP FUNCTION IF EXISTS structured_string_search (
+    text,
+    text,
+    text,
+    text,
+    integer
+);
 
 CREATE FUNCTION structured_string_search(
     p_title       text,
@@ -648,7 +676,7 @@ $$;
 -- Design decisions:
 -- Calculate the rating for all persons not just actors.
 --
--- Created a new table name_rating with the weigthed rating, number of titles 
+-- Created a new table name_rating with the weigthed rating, number of titles
 -- and number of votes
 --
 -- Added some code at the end of D3 which will keep the name_rating updated
@@ -661,16 +689,17 @@ $$;
 DROP TABLE IF EXISTS name_rating;
 
 CREATE TABLE name_rating (
-    nconst      character(10)   PRIMARY KEY REFERENCES person(nconst),
-    rating      numeric(5,1)    NOT NULL,
-    numvotes    integer         NOT NULL,
-    num_titles  integer         NOT NULL,
-    updated_at  timestamptz     NOT NULL DEFAULT now()
+    nconst character(10) PRIMARY KEY REFERENCES person (nconst),
+    rating numeric(5, 1) NOT NULL,
+    numvotes integer NOT NULL,
+    num_titles integer NOT NULL,
+    updated_at timestamptz NOT NULL DEFAULT now()
 );
 
 -- 2. Functions
-DROP FUNCTION IF EXISTS update_name_ratings();
-DROP FUNCTION IF EXISTS update_name_ratings_for_title(character(10));
+DROP FUNCTION IF EXISTS update_name_ratings ();
+
+DROP FUNCTION IF EXISTS update_name_ratings_for_title (character(10));
 
 -- Updates all name ratings-
 CREATE FUNCTION update_name_ratings()
@@ -736,7 +765,7 @@ LANGUAGE sql AS $$
 $$;
 
 -- Populate newly added name_rating table
-SELECT update_name_ratings();
+SELECT update_name_ratings ();
 
 -- =====================================================================
 -- D8_popular_actors (task 1-D.8)
@@ -751,8 +780,9 @@ SELECT update_name_ratings();
 -- string_agg is used if actors are credited more than once on the same title
 -- (e.g. playing two characters in one title) to get only row per actor.
 
-DROP FUNCTION IF EXISTS get_popular_actors(character(10));
-DROP FUNCTION IF EXISTS get_popular_costars(character(10));
+DROP FUNCTION IF EXISTS get_popular_actors (character(10));
+
+DROP FUNCTION IF EXISTS get_popular_costars (character(10));
 
 -- The cast of one movie, most popular (highest name_rating) first.
 CREATE FUNCTION get_popular_actors(p_tconst character(10))
@@ -785,7 +815,7 @@ BEGIN
     GROUP BY p.nconst, p.primaryname, nr.rating, nr.numvotes, nr.num_titles
     ORDER BY nr.rating DESC NULLS LAST, nr.numvotes DESC NULLS LAST, p.primaryname;
 END $$;
- 
+
 -- An actor's co-stars most popular first.
 CREATE FUNCTION get_popular_costars(p_nconst character(10))
 RETURNS TABLE (
@@ -832,7 +862,7 @@ END $$;
 -- This functions uses shared genres and shared people to find similar titles.
 -- Genres and people are weighted 0.5 each by default but can be changed
 -- when calling the function.
--- 
+--
 -- This function would be too slow to use for having a similar/recommended
 -- titles feature on a movie page. For that a table that we load using the
 -- calculations in the function could be used.
@@ -851,7 +881,8 @@ END $$;
 
 -- 1. Supporting indexes (move these to 1-E)
 CREATE INDEX IF NOT EXISTS title_genre_genre_idx ON title_genre (genre_name);
-CREATE INDEX IF NOT EXISTS worked_on_nconst_idx  ON worked_on (nconst);
+
+CREATE INDEX IF NOT EXISTS worked_on_nconst_idx ON worked_on (nconst);
 
 -- 2. Function
 DROP FUNCTION IF EXISTS get_similar_titles(character(10), integer, numeric, numeric);
@@ -928,13 +959,21 @@ BEGIN
     scored AS (
         SELECT
             c.tconst,
-            COALESCE(go.shared, 0) AS shared_genres,
+            COALESCE(
+
+.shared, 0) AS shared_genres,
             COALESCE(po.shared, 0) AS shared_people,
             CASE
-                WHEN (SELECT n FROM my_genre_count) + COALESCE(cgt.total, 0) - COALESCE(go.shared, 0) = 0
+                WHEN (SELECT n FROM my_genre_count) + COALESCE(cgt.total, 0) - COALESCE(
+
+.shared, 0) = 0
                     THEN 0
-                ELSE COALESCE(go.shared, 0)::numeric
-                     / ((SELECT n FROM my_genre_count) + COALESCE(cgt.total, 0) - COALESCE(go.shared, 0))
+                ELSE COALESCE(
+
+.shared, 0)::numeric
+                     / ((SELECT n FROM my_genre_count) + COALESCE(cgt.total, 0) - COALESCE(
+
+.shared, 0))
             END AS jaccard_genre,
             CASE
                 WHEN (SELECT n FROM my_people_count) + COALESCE(cpt.total, 0) - COALESCE(po.shared, 0) = 0
@@ -943,13 +982,17 @@ BEGIN
                      / ((SELECT n FROM my_people_count) + COALESCE(cpt.total, 0) - COALESCE(po.shared, 0))
             END AS jaccard_people
         FROM candidates c
-        LEFT JOIN genre_overlap          go  ON go.tconst  = c.tconst
+        LEFT JOIN genre_overlap
+
+ON
+
+.tconst  = c.tconst
         LEFT JOIN candidate_genre_totals cgt ON cgt.tconst = c.tconst
         LEFT JOIN people_overlap         po  ON po.tconst  = c.tconst
         LEFT JOIN candidate_people_totals cpt ON cpt.tconst = c.tconst
     )
 
-    SELECT rtrim(s.tconst)::text,
+SELECT rtrim(s.tconst)::text,
            t.primarytitle,
            ROUND(p_genre_weight * s.jaccard_genre + p_people_weight * s.jaccard_people, 4),
            s.shared_genres::integer,
@@ -959,13 +1002,14 @@ BEGIN
     ORDER BY (p_genre_weight * s.jaccard_genre + p_people_weight * s.jaccard_people) DESC,
              s.shared_people DESC, s.shared_genres DESC, t.primarytitle
     LIMIT p_limit;
+
 END $$;
 
 -- =====================================================================
 -- D10_person_words   (task 1-D.10)
 -- =====================================================================
 
-DROP FUNCTION IF EXISTS person_words(text, integer);
+DROP FUNCTION IF EXISTS person_words (text, integer);
 
 CREATE FUNCTION person_words(p_person_name text, p_limit integer DEFAULT 10)
 RETURNS TABLE (word text, frequency integer)
@@ -1034,5 +1078,125 @@ BEGIN
       AND tw.word ~ '[[:alnum:]]'
     GROUP BY tw.word
     ORDER BY frequency DESC, tw.word
+    LIMIT p_limit;
+END $$;
+
+-- D14_weighted_indexing (task 1-D.14)
+-- =====================================================================
+-- Part 1: word_weight, a weighted inverted index built from title_word
+-- Part 2: weighted_search(), best-match querying ranked by the weights
+--
+-- Weights follow the TF-IDF relevance measure in the DB-book
+-- (Information Retrieval chapter):
+--
+--     TF(d,t) = log(1 + n(d,t) / n(d))
+--     IDF(t)  = 1 / n(t)
+--     r(d,Q)  = sum over keywords t in Q of TF(d,t) * IDF(t)
+--
+--     n(d,t) = occurrences of word t in title d
+--     n(d)   = occurrences of all words in title d
+--     n(t)   = number of titles that contain word t
+--
+-- TF rewards words that make up a large part of a title's text.
+-- IDF punishes words that occur in many titles, so "the", "film" or
+-- "john" add almost nothing, while a rare word like "xenomorph" decides
+-- the ranking (the problem seen in word_to_words, 1-D.13).
+--
+-- Limitation: title_word holds each word at most once per field
+-- (primary key tconst, word, field), so n(d,t) is the number of fields
+-- (title, plot, characters, names) the word occurs in, between 1 and 4,
+-- not the real number of occurrences.
+--
+-- Depends on: title, title_word, word_index (B2), log_search() (1-D.1).
+-- =====================================================================
+
+-- ---------------------------------------------------------------------
+-- Part 1: the weighted index
+-- ---------------------------------------------------------------------
+-- tf and idf are stored besides weight, so the formula can be changed
+-- (e.g. to IDF = log(N / n(t))) without rebuilding the counts.
+-- The primary key starts with word, because queries look titles up by
+-- word; the key's index then serves the search directly.
+
+DROP TABLE IF EXISTS word_weight;
+
+CREATE TABLE word_weight (
+    word text NOT NULL REFERENCES word_index (word),
+    tconst character(10) NOT NULL REFERENCES title (tconst),
+    tf double precision NOT NULL,
+    idf double precision NOT NULL,
+    weight double precision NOT NULL,
+    PRIMARY KEY (word, tconst)
+);
+
+INSERT INTO word_weight (word, tconst, tf, idf, weight)
+WITH term_count AS (                -- n(d,t)
+    SELECT tw.tconst, tw.word, count(*) AS n_dt
+    FROM title_word tw
+    WHERE tw.word ~ '[[:alnum:]]'   -- skip empty words and punctuation
+    GROUP BY tw.tconst, tw.word
+),
+doc_length AS (                     -- n(d)
+    SELECT tc.tconst, sum(tc.n_dt) AS n_d
+    FROM term_count tc
+    GROUP BY tc.tconst
+),
+doc_freq AS (                       -- n(t)
+    SELECT tc.word, count(*) AS n_t
+    FROM term_count tc
+    GROUP BY tc.word
+)
+SELECT tc.word,
+       tc.tconst,
+       ln(1 + tc.n_dt::float8 / dl.n_d)                     AS tf,
+       1 / df.n_t::float8                                   AS idf,
+       ln(1 + tc.n_dt::float8 / dl.n_d) / df.n_t::float8    AS weight
+FROM term_count tc
+JOIN doc_length dl ON dl.tconst = tc.tconst
+JOIN doc_freq   df ON df.word   = tc.word;
+
+ANALYZE word_weight;
+
+-- ---------------------------------------------------------------------
+-- Part 2: weighted_search(keywords, limit, user)
+-- ---------------------------------------------------------------------
+-- Best-match querying (like 1-D.12), but each matched keyword adds its
+-- weight for that title instead of 1. Titles matching more keywords
+-- still tend to rank higher, but one rare keyword can outweigh several
+-- common ones. matched_words is returned to make that visible.
+-- The search is logged in the user's search history when a user is given.
+
+CREATE OR REPLACE FUNCTION weighted_search(p_keywords text[],
+                                           p_limit    integer DEFAULT 20,
+                                           p_user_id  integer DEFAULT NULL)
+RETURNS TABLE (tconst        text,
+               primarytitle  text,
+               relevance     double precision,
+               matched_words bigint)
+LANGUAGE plpgsql AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM unnest(p_keywords) AS k WHERE btrim(k) <> '') THEN
+        RAISE EXCEPTION 'At least one keyword must be given';
+    END IF;
+
+    IF p_user_id IS NOT NULL THEN
+        PERFORM log_search(p_user_id, array_to_string(p_keywords, ' '));
+    END IF;
+
+    RETURN QUERY
+    WITH kw AS (
+        SELECT DISTINCT lower(btrim(k)) AS k
+        FROM unnest(p_keywords) AS k
+        WHERE btrim(k) <> ''
+    )
+    SELECT rtrim(t.tconst)::text,
+           t.primarytitle,
+           sum(ww.weight) AS r,
+           count(*)       AS m
+    FROM kw
+    JOIN word_weight ww ON ww.word  = kw.k
+    JOIN title t        ON t.tconst = ww.tconst
+    GROUP BY t.tconst, t.primarytitle
+    ORDER BY r DESC, m DESC, t.primarytitle
     LIMIT p_limit;
 END $$;
