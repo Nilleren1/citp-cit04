@@ -318,3 +318,28 @@ SELECT * FROM get_trending_searches();
 SELECT * FROM get_trending_searches(10, NULL);
 
 ROLLBACK;
+
+
+-- =====================================================================
+-- get_title_reviews test
+-- =====================================================================
+
+ROLLBACK;
+DROP TABLE IF EXISTS tmp_users, tmp_title;
+DELETE FROM app_user WHERE username IN ('Nicolai H', 'Haris', 'Christoffer');
+
+BEGIN;
+CREATE TEMP TABLE tmp_users AS
+SELECT create_user('Nicolai H', 'not-a-real-hash') AS user_id, 1 AS n
+UNION ALL
+SELECT create_user('Haris', 'not-a-real-hash'), 2
+UNION ALL
+SELECT create_user('Christoffer', 'not-a-real-hash'), 3;
+CREATE TEMP TABLE tmp_title AS SELECT tconst FROM title LIMIT 1;
+
+SELECT * FROM rate((SELECT user_id FROM tmp_users WHERE n = 1), (SELECT tconst FROM tmp_title), 8, 'Great film');
+SELECT * FROM rate((SELECT user_id FROM tmp_users WHERE n = 2), (SELECT tconst FROM tmp_title), 5, 'Mediocre, but entertaining');
+SELECT * FROM rate((SELECT user_id FROM tmp_users WHERE n = 3), (SELECT tconst FROM tmp_title), 7); -- expected to fail, with no comment.
+
+SELECT * FROM get_title_reviews((SELECT tconst FROM tmp_title));
+ROLLBACK;

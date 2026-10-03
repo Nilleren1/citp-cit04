@@ -1308,3 +1308,20 @@ BEGIN
     ORDER BY COUNT(DISTINCT sh.user_id) DESC, COUNT(*) DESC, lower(btrim(sh.query))
     LIMIT p_limit;
 END $$;
+
+
+ -- get_title_reviews 
+ 
+ CREATE OR REPLACE FUNCTION get_title_reviews(p_tconst text)
+RETURNS TABLE (username   text,
+               rating     smallint,
+               review     text,
+               created_at timestamptz)
+LANGUAGE sql STABLE AS $$
+    SELECT u.username::text, r.rating, r.review, r.created_at
+    FROM rating r
+    JOIN app_user u ON u.user_id = r.user_id
+    WHERE r.tconst = p_tconst
+      AND r.review IS NOT NULL
+    ORDER BY r.created_at DESC;
+$$;
