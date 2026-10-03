@@ -1097,6 +1097,63 @@ BEGIN
     LIMIT p_limit;
 END $$;
 
+
+-- =====================================================================
+-- D11_exact_match_query (task 1-D.11)
+-- =====================================================================
+
+-- Design decisions:
+-- All keywords must match the title.
+
+-- 1. Function
+
+DROP FUNCTION IF EXISTS exact_match_query(TEXT);
+
+CREATE FUNCTION exact_match_query(p_query TEXT)
+
+RETURNS TABLE
+(
+tconst CHAR(10),
+primarytitle TEXT,
+startyear INTEGER
+)
+
+AS $$
+BEGIN
+RETURN QUERY
+
+-- Selecting the title information that returns from function
+    
+SELECT
+t.tconst,
+t.primarytitle,
+t.startyear
+
+FROM public.title AS t
+
+-- Check that every keyword appears in the title
+    
+WHERE
+(
+SELECT COUNT(*)
+    
+FROM unnest(string_to_array(LOWER(p_query), ' '))
+AS keyword
+WHERE LOWER(t.primarytitle) LIKE '%' || keyword || '%'
+) = array_length(string_to_array(p_query, ' '), 1)
+
+-- Sort results alphabetically
+ORDER BY t.primarytitle;
+
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- 2. Test for Exact-Match Querying
+
+SELECT *
+FROM exact_match_query('james bond');
+
 -- =====================================================================
 -- D13_word_to_words (task 1-D.13)
 -- =====================================================================
