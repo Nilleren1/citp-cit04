@@ -17,7 +17,7 @@
 
 
 -- =====================================================================
--- 1-D.1  Framework functions
+-- D.1  Framework functions
 -- =====================================================================
 BEGIN;
 CREATE TEMP TABLE tmp_test AS SELECT create_user('testuser', 'not-a-real-hash') AS user_id;
@@ -37,7 +37,7 @@ ROLLBACK;
 
 
 -- =====================================================================
--- 1-D.2  string_search
+-- D.2  string_search
 -- =====================================================================
 BEGIN;
 CREATE TEMP TABLE tmp_test AS SELECT create_user('testuser', 'not-a-real-hash') AS user_id;
@@ -50,7 +50,7 @@ ROLLBACK;
 
 
 -- =====================================================================
--- 1-D.3  rate
+-- D.3  rate
 -- =====================================================================
 BEGIN;
 CREATE TEMP TABLE tmp_test AS
@@ -77,7 +77,7 @@ ROLLBACK;
 
 
 -- =====================================================================
--- 1-D.4  structured_string_search
+-- D.4  structured_string_search
 -- =====================================================================
 BEGIN;
 CREATE TEMP TABLE tmp_test AS SELECT create_user('testuser', 'not-a-real-hash') AS user_id;
@@ -90,7 +90,7 @@ ROLLBACK;
 
 
 -- =====================================================================
--- 1-D.5  name_search, structured_name_search
+-- D.5  name_search, structured_name_search
 -- =====================================================================
 
 -- Substring of a name; the best-known match is ranked first
@@ -125,7 +125,7 @@ END $$;
 
 
 -- =====================================================================
--- 1-D.6  co_players
+-- D.6  co_players
 -- =====================================================================
 
 -- Most frequent co-players, highest frequency first
@@ -136,7 +136,7 @@ SELECT * FROM co_players('Nobody With This Name');
 
 
 -- =====================================================================
--- 1-D.7  Name rating
+-- D.7  Name rating
 -- =====================================================================
 BEGIN;
 CREATE TEMP TABLE tmp_test AS SELECT create_user('testuser', 'not-a-real-hash') AS user_id;
@@ -159,7 +159,7 @@ ROLLBACK;
 
 
 -- =====================================================================
--- 1-D.8  Popular actors
+-- D.8  Popular actors
 -- =====================================================================
 
 -- Actors of a title with more than three actors
@@ -173,7 +173,7 @@ SELECT * FROM get_popular_costars('nm0580565');
 
 
 -- =====================================================================
--- 1-D.9  Similar titles
+-- D.9  Similar titles
 -- =====================================================================
 
 -- Default settings
@@ -183,7 +183,7 @@ SELECT * FROM get_similar_titles('tt2209418', 10, 0.0, 1.0);
 
 
 -- =====================================================================
--- 1-D.10  person_words
+-- D.10  person_words
 -- =====================================================================
 
 -- Words for a person
@@ -193,17 +193,17 @@ SELECT * FROM person_words('Ice CUbe', 25);
 
 
 -- =====================================================================
--- 1-D.11  Exact-match querying            (to be added)
--- 1-D.12  Best-match querying             (to be added)
+-- D.11  Exact-match querying            (to be added)
+-- D.12  Best-match querying             (to be added)
 -- =====================================================================
 
 
 -- =====================================================================
--- 1-D.13  word_to_words
+-- D.13  word_to_words
 -- =====================================================================
 
 -- Words most frequent among titles indexed by "space"
-SELECT * FROM word_to_words(ARRAY['space'], 10);
+SELECT * FROM word_to_words(ARRAY['space'], 10); -- 1.4 sec before indexing, 0.3 sec after indexing
 
 -- The query word itself is not in the result (expected: 0)
 SELECT count(*) AS should_be_0
@@ -215,7 +215,7 @@ SELECT * FROM word_to_words(ARRAY['xyzxyzxyz', 'space']);
 
 
 -- =====================================================================
--- 1-D.14  Weighted indexing               (to be added)
+-- D.14  Weighted indexing               (to be added)
 -- =====================================================================
 
 -- Weights of a common and a rarer word (expected: "the" has a much lower idf)
@@ -238,7 +238,10 @@ SELECT * FROM weighted_search(ARRAY['xyzxyzxyz']);
  EXCEPTION WHEN raise_exception THEN
      RAISE NOTICE 'OK, rejected: %', SQLERRM;
  END $$;
--- D15
+
+-- =====================================================================
+-- D.15
+-- =====================================================================
 -- Since there is no data in our framework tables this test include alot of test data
 -- Tests 3 functions: recommend_from_bookmarks, recommend_from_ratings, get_trending_searches
 BEGIN;
