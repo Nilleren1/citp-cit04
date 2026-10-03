@@ -417,8 +417,10 @@ BEGIN
     SET averagerating = v_new_avg, numvotes = v_new_votes
     WHERE t.tconst = p_tconst;
  
-    IF to_regprocedure('refresh_name_ratings_for_title(character)') IS NOT NULL THEN
-        PERFORM refresh_name_ratings_for_title(p_tconst);
+    -- Keeps the name_rating up to date when a new rating for title is added.
+    -- Only defined once D7 has been run.
+    IF to_regprocedure('update_name_ratings_for_title(character)') IS NOT NULL THEN
+        PERFORM update_name_ratings_for_title(p_tconst);
     END IF;
  
     RETURN true;
@@ -896,105 +898,162 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql STABLE AS $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM title t WHERE t.tconst = p_tconst) THEN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM title t
+        WHERE t.tconst = p_tconst
+    ) THEN
         RAISE EXCEPTION 'No title with tconst %', p_tconst;
     END IF;
 
     RETURN QUERY
     WITH my_genres AS (
-        SELECT genre_name FROM title_genre WHERE title_genre.tconst = p_tconst
+        SELECT genre_name
+        FROM title_genre
+        WHERE title_genre.tconst = p_tconst
     ),
     my_people AS (
-        SELECT DISTINCT nconst FROM worked_on WHERE worked_on.tconst = p_tconst
+        SELECT DISTINCT nconst
+        FROM worked_on
+        WHERE worked_on.tconst = p_tconst
     ),
-    my_genre_count AS (SELECT COUNT(*) AS n FROM my_genres),
-    my_people_count AS (SELECT COUNT(*) AS n FROM my_people),
+    my_genre_count AS (
+        SELECT COUNT(*) AS n
+        FROM my_genres
+    ),
+    my_people_count AS (
+        SELECT COUNT(*) AS n
+        FROM my_people
+    ),
 
     candidates AS (
         SELECT DISTINCT tg.tconst
         FROM title_genre tg
-        WHERE tg.genre_name IN (SELECT genre_name FROM my_genres)
-          AND tg.tconst <> p_tconst
+        WHERE tg.genre_name IN (
+            SELECT genre_name
+            FROM my_genres
+        )
+        AND tg.tconst <> p_tconst
+
         UNION
+
         SELECT DISTINCT wo.tconst
         FROM worked_on wo
-        WHERE wo.nconst IN (SELECT nconst FROM my_people)
-          AND wo.tconst <> p_tconst
+        WHERE wo.nconst IN (
+            SELECT nconst
+            FROM my_people
+        )
+        AND wo.tconst <> p_tconst
     ),
 
     genre_overlap AS (
         SELECT tg.tconst, COUNT(*) AS shared
         FROM title_genre tg
-        JOIN my_genres mg ON mg.genre_name = tg.genre_name
-        WHERE tg.tconst IN (SELECT c.tconst FROM candidates c)
+        JOIN my_genres mg
+            ON mg.genre_name = tg.genre_name
+        WHERE tg.tconst IN (
+            SELECT c.tconst
+            FROM candidates c
+        )
         GROUP BY tg.tconst
     ),
+
     candidate_genre_totals AS (
         SELECT tg.tconst, COUNT(*) AS total
         FROM title_genre tg
-        WHERE tg.tconst IN (SELECT c.tconst FROM candidates c)
+        WHERE tg.tconst IN (
+            SELECT c.tconst
+            FROM candidates c
+        )
         GROUP BY tg.tconst
     ),
 
     people_overlap AS (
         SELECT wo.tconst, COUNT(DISTINCT wo.nconst) AS shared
         FROM worked_on wo
-        JOIN my_people mp ON mp.nconst = wo.nconst
-        WHERE wo.tconst IN (SELECT c.tconst FROM candidates c)
+        JOIN my_people mp
+            ON mp.nconst = wo.nconst
+        WHERE wo.tconst IN (
+            SELECT c.tconst
+            FROM candidates c
+        )
         GROUP BY wo.tconst
     ),
+
     candidate_people_totals AS (
         SELECT wo.tconst, COUNT(DISTINCT wo.nconst) AS total
         FROM worked_on wo
-        WHERE wo.tconst IN (SELECT c.tconst FROM candidates c)
+        WHERE wo.tconst IN (
+            SELECT c.tconst
+            FROM candidates c
+        )
         GROUP BY wo.tconst
     ),
 
     scored AS (
         SELECT
             c.tconst,
-            COALESCE(
-
-.shared, 0) AS shared_genres,
+            COALESCE(go.shared, 0) AS shared_genres,
             COALESCE(po.shared, 0) AS shared_people,
+
             CASE
-                WHEN (SELECT n FROM my_genre_count) + COALESCE(cgt.total, 0) - COALESCE(
-
-.shared, 0) = 0
-                    THEN 0
-                ELSE COALESCE(
-
-.shared, 0)::numeric
-                     / ((SELECT n FROM my_genre_count) + COALESCE(cgt.total, 0) - COALESCE(
-
-.shared, 0))
+                WHEN (SELECT n FROM my_genre_count)
+                     + COALESCE(cgt.total, 0)
+                     - COALESCE(go.shared, 0) = 0
+                THEN 0
+                ELSE COALESCE(go.shared, 0)::numeric
+                     / (
+                         (SELECT n FROM my_genre_count)
+                         + COALESCE(cgt.total, 0)
+                         - COALESCE(go.shared, 0)
+                     )
             END AS jaccard_genre,
+
             CASE
-                WHEN (SELECT n FROM my_people_count) + COALESCE(cpt.total, 0) - COALESCE(po.shared, 0) = 0
-                    THEN 0
+                WHEN (SELECT n FROM my_people_count)
+                     + COALESCE(cpt.total, 0)
+                     - COALESCE(po.shared, 0) = 0
+                THEN 0
                 ELSE COALESCE(po.shared, 0)::numeric
-                     / ((SELECT n FROM my_people_count) + COALESCE(cpt.total, 0) - COALESCE(po.shared, 0))
+                     / (
+                         (SELECT n FROM my_people_count)
+                         + COALESCE(cpt.total, 0)
+                         - COALESCE(po.shared, 0)
+                     )
             END AS jaccard_people
+
         FROM candidates c
-        LEFT JOIN genre_overlap
-
-ON
-
-.tconst  = c.tconst
-        LEFT JOIN candidate_genre_totals cgt ON cgt.tconst = c.tconst
-        LEFT JOIN people_overlap         po  ON po.tconst  = c.tconst
-        LEFT JOIN candidate_people_totals cpt ON cpt.tconst = c.tconst
+        LEFT JOIN genre_overlap go
+            ON go.tconst = c.tconst
+        LEFT JOIN candidate_genre_totals cgt
+            ON cgt.tconst = c.tconst
+        LEFT JOIN people_overlap po
+            ON po.tconst = c.tconst
+        LEFT JOIN candidate_people_totals cpt
+            ON cpt.tconst = c.tconst
     )
 
-SELECT rtrim(s.tconst)::text,
-           t.primarytitle,
-           ROUND(p_genre_weight * s.jaccard_genre + p_people_weight * s.jaccard_people, 4),
-           s.shared_genres::integer,
-           s.shared_people::integer
+    SELECT
+        rtrim(s.tconst)::text,
+        t.primarytitle,
+        ROUND(
+            p_genre_weight * s.jaccard_genre
+            + p_people_weight * s.jaccard_people,
+            4
+        ),
+        s.shared_genres::integer,
+        s.shared_people::integer
     FROM scored s
-    JOIN title t ON t.tconst = s.tconst
-    ORDER BY (p_genre_weight * s.jaccard_genre + p_people_weight * s.jaccard_people) DESC,
-             s.shared_people DESC, s.shared_genres DESC, t.primarytitle
+    JOIN title t
+        ON t.tconst = s.tconst
+    ORDER BY
+        (
+            p_genre_weight * s.jaccard_genre
+            + p_people_weight * s.jaccard_people
+        ) DESC,
+        s.shared_people DESC,
+        s.shared_genres DESC,
+        t.primarytitle
     LIMIT p_limit;
 
 END $$;
@@ -1038,6 +1097,37 @@ BEGIN
     LIMIT p_limit;
 END $$;
 
+
+-- =====================================================================
+-- D11_exact_match_query (task 1-D.11)
+-- =====================================================================
+
+-- Design decisions:
+-- All keywords must match the title.
+
+DROP FUNCTION IF EXISTS exact_match_query(TEXT);
+
+CREATE FUNCTION exact_match_query(p_query TEXT)
+RETURNS TABLE(tconst CHAR(10), primarytitle TEXT,startyear INTEGER)
+LANGUAGE plpgsql AS $$
+BEGIN
+    RETURN QUERY
+
+-- Selecting the title information that returns from function
+    SELECT t.tconst, t.primarytitle, t.startyear
+    FROM public.title AS t
+
+-- Check that every keyword appears in the title
+    WHERE(
+        SELECT COUNT(*) FROM unnest(string_to_array(LOWER(p_query), ' '))
+        AS keyword WHERE LOWER(t.primarytitle) LIKE '%' || keyword || '%') = array_length(string_to_array(p_query, ' '), 1
+    )
+
+-- Sort results alphabetically
+    ORDER BY t.primarytitle;
+
+END $$;
+
 -- =====================================================================
 -- D13_word_to_words (task 1-D.13)
 -- =====================================================================
@@ -1075,6 +1165,7 @@ BEGIN
     LIMIT p_limit;
 END $$;
 
+-- =====================================================================
 -- D14_weighted_indexing (task 1-D.14)
 -- =====================================================================
 -- Part 1: word_weight, a weighted inverted index built from title_word
@@ -1191,8 +1282,12 @@ BEGIN
     JOIN word_weight ww ON ww.word  = kw.k
     JOIN title t        ON t.tconst = ww.tconst
     GROUP BY t.tconst, t.primarytitle
-    ORDER BY r DESC, m DESC, t.primarytitle
+    ORDER BY r DESC, m DESC, t.primarytitle;
+END $$;
+
+-- =====================================================================
 -- D15_own_ideas (task 1-D.15)
+-- =====================================================================
 
 DROP FUNCTION IF EXISTS recommend_from_bookmarks(integer, integer, integer, integer);
 DROP FUNCTION IF EXISTS recommend_from_ratings(integer, integer, integer, integer, integer);
@@ -1308,20 +1403,3 @@ BEGIN
     ORDER BY COUNT(DISTINCT sh.user_id) DESC, COUNT(*) DESC, lower(btrim(sh.query))
     LIMIT p_limit;
 END $$;
-
-
- -- get_title_reviews 
- 
- CREATE OR REPLACE FUNCTION get_title_reviews(p_tconst text)
-RETURNS TABLE (username   text,
-               rating     smallint,
-               review     text,
-               created_at timestamptz)
-LANGUAGE sql STABLE AS $$
-    SELECT u.username::text, r.rating, r.review, r.created_at
-    FROM rating r
-    JOIN app_user u ON u.user_id = r.user_id
-    WHERE r.tconst = p_tconst
-      AND r.review IS NOT NULL
-    ORDER BY r.created_at DESC;
-$$;

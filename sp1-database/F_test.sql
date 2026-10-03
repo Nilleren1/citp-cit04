@@ -193,7 +193,14 @@ SELECT * FROM person_words('Ice CUbe', 25);
 
 
 -- =====================================================================
--- D.11  Exact-match querying            (to be added)
+-- D.11  Exact-match querying
+-- =====================================================================
+
+-- Exact-match query for a title
+SELECT * FROM exact_match_query('james bond');
+
+
+-- =====================================================================
 -- D.12  Best-match querying             (to be added)
 -- =====================================================================
 
@@ -322,10 +329,7 @@ SELECT * FROM get_trending_searches(10, NULL);
 
 ROLLBACK;
 
-
--- =====================================================================
 -- get_title_reviews test
--- =====================================================================
 
 ROLLBACK;
 DROP TABLE IF EXISTS tmp_users, tmp_title;
