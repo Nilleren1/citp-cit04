@@ -3,7 +3,7 @@
 
 -- D.1
 -- finds one user's history, already sorted newest first
-CREATE INDEX IF NOT EXISTS search_history_user_idx ON search_history (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS search_history_user_id_created_at_idx ON search_history (user_id, created_at DESC);
 
 -- D.3, D.7 + get_title_reviews
 -- rating's key leads with user_id, so "all ratings of a title" needs its own index
@@ -18,7 +18,7 @@ CREATE INDEX IF NOT EXISTS worked_on_nconst_idx ON worked_on (nconst);
 -- title_genre's primary key leads with tconst, so "which titles share
 -- this genre" (get_similar_movies' candidate generation) would
 -- otherwise be a full table scan.
-CREATE INDEX IF NOT EXISTS title_genre_genre_idx ON title_genre (genre_name);
+CREATE INDEX IF NOT EXISTS title_genre_genre_name_idx ON title_genre (genre_name);
 
 -- D.10 (person_words)
 -- Supports person_words, which filters person by lower(primaryname).
@@ -28,7 +28,7 @@ CREATE INDEX IF NOT EXISTS person_lower_primaryname_idx ON person (lower(primary
 -- title_word's primary key leads with tconst, not word, so a per-keyword
 -- lookup would otherwise scan the largest table in the schema.
 -- (word, tconst) answers word lookups from the index alone.
-CREATE INDEX IF NOT EXISTS title_word_idx ON title_word (word, tconst);
+CREATE INDEX IF NOT EXISTS title_word_word_tconst_idx ON title_word (word, tconst);
 
 -- D.15 (get_trending_searches)
 -- The WHERE created_at >= ... time-window filter would otherwise scan the whole table.
