@@ -193,7 +193,14 @@ SELECT * FROM person_words('Ice CUbe', 25);
 
 
 -- =====================================================================
--- 1-D.11  Exact-match querying            (to be added)
+-- 1-D.11  Exact-match querying
+-- =====================================================================
+
+-- Exact-match query for a title
+SELECT * FROM exact_match_query('james bond');
+
+
+-- =====================================================================
 -- 1-D.12  Best-match querying             (to be added)
 -- =====================================================================
 
@@ -215,7 +222,7 @@ SELECT * FROM word_to_words(ARRAY['xyzxyzxyz', 'space']);
 
 
 -- =====================================================================
--- 1-D.14  Weighted indexing               (to be added)
+-- 1-D.14  Weighted indexing
 -- =====================================================================
 
 -- Weights of a common and a rarer word (expected: "the" has a much lower idf)
@@ -238,7 +245,11 @@ SELECT * FROM weighted_search(ARRAY['xyzxyzxyz']);
  EXCEPTION WHEN raise_exception THEN
      RAISE NOTICE 'OK, rejected: %', SQLERRM;
  END $$;
--- D15
+
+
+-- =====================================================================
+-- D15 Own ideas
+-- =====================================================================
 -- Since there is no data in our framework tables this test include alot of test data
 -- Tests 3 functions: recommend_from_bookmarks, recommend_from_ratings, get_trending_searches
 BEGIN;
@@ -319,10 +330,7 @@ SELECT * FROM get_trending_searches(10, NULL);
 
 ROLLBACK;
 
-
--- =====================================================================
 -- get_title_reviews test
--- =====================================================================
 
 ROLLBACK;
 DROP TABLE IF EXISTS tmp_users, tmp_title;
