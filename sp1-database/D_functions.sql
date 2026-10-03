@@ -417,8 +417,10 @@ BEGIN
     SET averagerating = v_new_avg, numvotes = v_new_votes
     WHERE t.tconst = p_tconst;
  
-    IF to_regprocedure('refresh_name_ratings_for_title(character)') IS NOT NULL THEN
-        PERFORM refresh_name_ratings_for_title(p_tconst);
+    -- Keeps the name_rating up to date when a new rating for title is added.
+    -- Only defined once D7 has been run.
+    IF to_regprocedure('update_name_ratings_for_title(character)') IS NOT NULL THEN
+        PERFORM update_name_ratings_for_title(p_tconst);
     END IF;
  
     RETURN true;
