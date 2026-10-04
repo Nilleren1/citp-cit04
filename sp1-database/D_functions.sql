@@ -1292,6 +1292,7 @@ END $$;
 DROP FUNCTION IF EXISTS recommend_from_bookmarks(integer, integer, integer, integer);
 DROP FUNCTION IF EXISTS recommend_from_ratings(integer, integer, integer, integer, integer);
 DROP FUNCTION IF EXISTS get_trending_searches(integer, integer);
+DROP FUNCTION IF EXISTS get_title_reviews(text);
 
 -- Recommendations from a user's bookmarked titles (watched or watchlist).
 CREATE FUNCTION recommend_from_bookmarks(
@@ -1403,3 +1404,18 @@ BEGIN
     ORDER BY COUNT(DISTINCT sh.user_id) DESC, COUNT(*) DESC, lower(btrim(sh.query))
     LIMIT p_limit;
 END $$;
+
+-- Get all reviews for a title
+CREATE FUNCTION get_title_reviews(p_tconst text)
+RETURNS TABLE (username   text,
+               rating     smallint,
+               review     text,
+               created_at timestamptz)
+LANGUAGE sql STABLE AS $$
+    SELECT u.username::text, r.rating, r.review, r.created_at
+    FROM rating r
+    JOIN app_user u ON u.user_id = r.user_id
+    WHERE r.tconst = p_tconst
+      AND r.review IS NOT NULL
+    ORDER BY r.created_at DESC;
+$$;
