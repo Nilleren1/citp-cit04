@@ -1,0 +1,58 @@
+-- =====================================================================
+-- D12_best_match_query
+-- =====================================================================
+
+-- Design decisions:
+-- Uses the existing "title" table.
+-- Results are ranked by the number of matching keywords.
+
+-- 1. Function
+
+DROP FUNCTION IF EXISTS best_match_query(TEXT);
+
+CREATE FUNCTION best_match_query(p_query TEXT)
+
+RETURNS TABLE
+(
+tconst CHAR(10),
+primarytitle TEXT,
+startyear INTEGER,
+matching_keywords BIGINT
+)
+
+AS $$
+BEGIN
+RETURN QUERY
+
+-- Select title information and count matching keywords
+
+SELECT
+t.tconst,
+t.primarytitle,
+t.startyear,
+
+COUNT(*) AS matching_keywords
+
+FROM public.title AS t,
+unnest(string_to_array(LOWER(p_query), ' ')) AS keyword
+
+-- Check which keywords appear in the title
+ 
+WHERE LOWER(t.primarytitle) LIKE '%' || keyword || '%'
+
+-- Count matches for each title
+
+GROUP BY t.tconst, t.primarytitle, t.startyear
+
+-- Show titles with the most matches first
+
+ORDER BY matching_keywords DESC;
+
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- 2. Test for Best-Match Querying
+
+SELECT *
+FROM best_match_query('Avatar');
