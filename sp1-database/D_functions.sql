@@ -1322,7 +1322,8 @@ BEGIN
     JOIN word_weight ww ON ww.word  = kw.k
     JOIN title t        ON t.tconst = ww.tconst
     GROUP BY t.tconst, t.primarytitle
-    ORDER BY r DESC, m DESC, t.primarytitle;
+    ORDER BY r DESC, m DESC, t.primarytitle
+    LIMIT p_limit;
 END $$;
 
 -- =====================================================================

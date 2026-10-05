@@ -42,10 +42,10 @@ ROLLBACK;
 BEGIN;
 CREATE TEMP TABLE tmp_test AS SELECT create_user('testuser', 'not-a-real-hash') AS user_id;
 -- Search with a user; the search is logged
-SELECT * FROM string_search('batman', (SELECT user_id FROM tmp_test));
+SELECT * FROM string_search('batman', (SELECT user_id FROM tmp_test)) LIMIT 20;
 SELECT * FROM get_search_history((SELECT user_id FROM tmp_test));
 -- Search without a match
-SELECT * FROM string_search('an entirely unlikely plot phrase xyz');
+SELECT * FROM string_search('an entirely unlikely plot phrase xyz') LIMIT 20;
 ROLLBACK;
 
 
@@ -112,7 +112,7 @@ EXCEPTION WHEN raise_exception THEN
 END $$;
 
 -- Structured: actors credited on titles containing "dune"
-SELECT * FROM structured_name_search(NULL, 'actor', 'dune', NULL);
+SELECT * FROM structured_name_search(NULL, 'actor', 'dune', NULL) LIMIT 20;
 
 -- Structured: no criteria given is rejected (expected: NOTICE "OK, rejected: ...")
 DO $$
@@ -169,7 +169,7 @@ SELECT * FROM get_popular_actors(
 );
 
 -- Popular co-stars of a person
-SELECT * FROM get_popular_costars('nm0580565');
+SELECT * FROM get_popular_costars('nm0580565') LIMIT 20;
 
 
 -- =====================================================================
@@ -197,7 +197,7 @@ SELECT * FROM person_words('Ice CUbe', 25);
 -- =====================================================================
 
 -- Exact-match query for a title
-SELECT * FROM exact_match_query('james bond');
+SELECT * FROM exact_match_query('james bond') LIMIT 20;
 
 
 -- =====================================================================
@@ -205,7 +205,7 @@ SELECT * FROM exact_match_query('james bond');
 -- =====================================================================
 
 -- Best-match query for a title
-SELECT * FROM best_match_query('james bond');
+SELECT * FROM best_match_query('james bond') LIMIT 20;
 
 -- =====================================================================
 -- D.13  word_to_words
@@ -231,10 +231,10 @@ SELECT * FROM word_to_words(ARRAY['xyzxyzxyz', 'space']);
 SELECT DISTINCT word, idf FROM word_weight WHERE word IN ('the', 'space', 'alien');
 
 -- -- Weighted search with several keywords
-SELECT * FROM weighted_search(ARRAY['space', 'alien', 'ship'], 10);
+SELECT * FROM weighted_search(ARRAY['space', 'alien', 'ship'], 20);
 
 -- -- A common word adds almost nothing to the ranking
-SELECT * FROM weighted_search(ARRAY['space', 'alien', 'ship', 'the'], 10);
+SELECT * FROM weighted_search(ARRAY['space', 'alien', 'ship', 'the'], 20);
 
 -- -- No match (expected: no rows)
 SELECT * FROM weighted_search(ARRAY['xyzxyzxyz']);
@@ -333,7 +333,6 @@ ROLLBACK;
 
 -- get_title_reviews test
 
-ROLLBACK;
 DROP TABLE IF EXISTS tmp_users, tmp_title;
 DELETE FROM app_user WHERE username IN ('Nicolai H', 'Haris', 'Christoffer');
 
