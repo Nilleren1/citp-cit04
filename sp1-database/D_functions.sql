@@ -1101,69 +1101,81 @@ END $$;
 -- =====================================================================
 -- D11_exact_match_query (task 1-D.11)
 -- =====================================================================
-
 -- Design decisions:
--- All keywords must match the title.
+-- Searches all fields (title, plot, characters, person names)
 
-DROP FUNCTION IF EXISTS exact_match_query(TEXT);
+DROP FUNCTION IF EXISTS exact_match_query(text, integer);
 
-CREATE FUNCTION exact_match_query(p_query TEXT)
-RETURNS TABLE(tconst CHAR(10), primarytitle TEXT, startyear INTEGER)
+CREATE FUNCTION exact_match_query(p_query text, p_user_id integer DEFAULT NULL)
+RETURNS TABLE(tconst char(10), primarytitle text, startyear integer)
 LANGUAGE plpgsql AS $$
 DECLARE
-    v_keyword_count INTEGER;
+    v_keyword_count integer;
 BEGIN
-    SELECT COUNT(DISTINCT LOWER(keyword))
+    SELECT COUNT(DISTINCT lower(keyword))
     INTO v_keyword_count
-    FROM unnest(string_to_array(p_query, ' ')) AS keyword;
+    FROM unnest(string_to_array(p_query, ' ')) AS keyword
+    WHERE btrim(keyword) <> '';
+
+    IF v_keyword_count IS NULL OR v_keyword_count = 0 THEN
+        RAISE EXCEPTION 'At least one non-empty keyword must be given';
+    END IF;
+
+    IF p_user_id IS NOT NULL THEN
+        PERFORM log_search(p_user_id, p_query);
+    END IF;
 
     RETURN QUERY
     SELECT t.tconst, t.primarytitle, t.startyear
     FROM title t
     JOIN title_word tw
         ON tw.tconst = t.tconst
-    WHERE tw.field = 't'
-      AND LOWER(tw.word) IN (
-          SELECT LOWER(keyword)
-          FROM unnest(string_to_array(p_query, ' ')) AS keyword
-      )
+    WHERE lower(tw.word) IN (
+        SELECT lower(keyword)
+        FROM unnest(string_to_array(p_query, ' ')) AS keyword
+        WHERE btrim(keyword) <> ''
+    )
     GROUP BY t.tconst, t.primarytitle, t.startyear
-    HAVING COUNT(DISTINCT LOWER(tw.word)) = v_keyword_count
+    HAVING COUNT(DISTINCT lower(tw.word)) = v_keyword_count
     ORDER BY t.primarytitle;
 END $$;
+
 
 -- =====================================================================
 -- D12_best_match_query (task 1-D.12)
 -- =====================================================================
-
 -- Design decisions:
--- All keywords must match the title.
+-- Searches all fields (title, plot, characters, person names)
 
-DROP FUNCTION IF EXISTS best_match_query(TEXT);
+DROP FUNCTION IF EXISTS best_match_query(text, integer);
 
-CREATE FUNCTION best_match_query(p_query TEXT)
+CREATE FUNCTION best_match_query(p_query text, p_user_id integer DEFAULT NULL)
 RETURNS TABLE(
-    tconst CHAR(10),
-    primarytitle TEXT,
-    startyear INTEGER,
-    rank BIGINT
+    tconst       char(10),
+    primarytitle text,
+    startyear    integer,
+    rank         bigint
 )
 LANGUAGE plpgsql AS $$
 BEGIN
+    IF p_user_id IS NOT NULL THEN
+        PERFORM log_search(p_user_id, p_query);
+    END IF;
+
     RETURN QUERY
     SELECT
         t.tconst,
         t.primarytitle,
         t.startyear,
-        COUNT(DISTINCT LOWER(tw.word)) AS rank
+        COUNT(DISTINCT lower(tw.word)) AS rank
     FROM title t
     JOIN title_word tw
         ON tw.tconst = t.tconst
-    WHERE tw.field = 't'
-      AND LOWER(tw.word) IN (
-          SELECT LOWER(keyword)
-          FROM unnest(string_to_array(p_query, ' ')) AS keyword
-      )
+    WHERE lower(tw.word) IN (
+        SELECT lower(keyword)
+        FROM unnest(string_to_array(p_query, ' ')) AS keyword
+        WHERE btrim(keyword) <> ''
+    )
     GROUP BY t.tconst, t.primarytitle, t.startyear
     ORDER BY rank DESC, t.primarytitle;
 END $$;
