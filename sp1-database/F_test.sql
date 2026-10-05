@@ -201,9 +201,11 @@ SELECT * FROM exact_match_query('james bond');
 
 
 -- =====================================================================
--- D.12  Best-match querying             (to be added)
+-- D.12  Best-match querying
 -- =====================================================================
 
+-- Best-match query for a title
+SELECT * FROM best_match_query('james bond');
 
 -- =====================================================================
 -- D.13  word_to_words
@@ -222,7 +224,7 @@ SELECT * FROM word_to_words(ARRAY['xyzxyzxyz', 'space']);
 
 
 -- =====================================================================
--- D.14  Weighted indexing               (to be added)
+-- D.14  Weighted indexing
 -- =====================================================================
 
 -- Weights of a common and a rarer word (expected: "the" has a much lower idf)
@@ -247,7 +249,7 @@ SELECT * FROM weighted_search(ARRAY['xyzxyzxyz']);
  END $$;
 
 -- =====================================================================
--- D.15
+-- D.15 - Own ideas
 -- =====================================================================
 -- Since there is no data in our framework tables this test include alot of test data
 -- Tests 3 functions: recommend_from_bookmarks, recommend_from_ratings, get_trending_searches

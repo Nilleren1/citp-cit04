@@ -1108,24 +1108,64 @@ END $$;
 DROP FUNCTION IF EXISTS exact_match_query(TEXT);
 
 CREATE FUNCTION exact_match_query(p_query TEXT)
-RETURNS TABLE(tconst CHAR(10), primarytitle TEXT,startyear INTEGER)
+RETURNS TABLE(tconst CHAR(10), primarytitle TEXT, startyear INTEGER)
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_keyword_count INTEGER;
+BEGIN
+    SELECT COUNT(DISTINCT LOWER(keyword))
+    INTO v_keyword_count
+    FROM unnest(string_to_array(p_query, ' ')) AS keyword;
+
+    RETURN QUERY
+    SELECT t.tconst, t.primarytitle, t.startyear
+    FROM title t
+    JOIN title_word tw
+        ON tw.tconst = t.tconst
+    WHERE tw.field = 't'
+      AND LOWER(tw.word) IN (
+          SELECT LOWER(keyword)
+          FROM unnest(string_to_array(p_query, ' ')) AS keyword
+      )
+    GROUP BY t.tconst, t.primarytitle, t.startyear
+    HAVING COUNT(DISTINCT LOWER(tw.word)) = v_keyword_count
+    ORDER BY t.primarytitle;
+END $$;
+
+-- =====================================================================
+-- D12_best_match_query (task 1-D.12)
+-- =====================================================================
+
+-- Design decisions:
+-- All keywords must match the title.
+
+DROP FUNCTION IF EXISTS best_match_query(TEXT);
+
+CREATE FUNCTION best_match_query(p_query TEXT)
+RETURNS TABLE(
+    tconst CHAR(10),
+    primarytitle TEXT,
+    startyear INTEGER,
+    rank BIGINT
+)
 LANGUAGE plpgsql AS $$
 BEGIN
     RETURN QUERY
-
--- Selecting the title information that returns from function
-    SELECT t.tconst, t.primarytitle, t.startyear
-    FROM public.title AS t
-
--- Check that every keyword appears in the title
-    WHERE(
-        SELECT COUNT(*) FROM unnest(string_to_array(LOWER(p_query), ' '))
-        AS keyword WHERE LOWER(t.primarytitle) LIKE '%' || keyword || '%') = array_length(string_to_array(p_query, ' '), 1
-    )
-
--- Sort results alphabetically
-    ORDER BY t.primarytitle;
-
+    SELECT
+        t.tconst,
+        t.primarytitle,
+        t.startyear,
+        COUNT(DISTINCT LOWER(tw.word)) AS rank
+    FROM title t
+    JOIN title_word tw
+        ON tw.tconst = t.tconst
+    WHERE tw.field = 't'
+      AND LOWER(tw.word) IN (
+          SELECT LOWER(keyword)
+          FROM unnest(string_to_array(p_query, ' ')) AS keyword
+      )
+    GROUP BY t.tconst, t.primarytitle, t.startyear
+    ORDER BY rank DESC, t.primarytitle;
 END $$;
 
 -- =====================================================================
