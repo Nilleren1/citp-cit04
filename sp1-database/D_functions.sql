@@ -1099,11 +1099,13 @@ END $$;
 
 
 -- =====================================================================
--- D11_exact_match_query (task 1-D.11)
+-- D11_exact_match_query
 -- =====================================================================
 
 -- Design decisions:
--- All keywords must match the title.
+-- Uses the existing "title" and "title_word" tables.
+-- Returns titles that contain all the given keywords.
+
 
 -- 1. Function
 
@@ -1112,8 +1114,9 @@ DROP FUNCTION IF EXISTS exact_match_query(TEXT);
 CREATE FUNCTION exact_match_query(p_query TEXT)
 
 RETURNS TABLE
+
 (
-tconst CHAR(10),
+tconst CHARACTER,
 primarytitle TEXT,
 startyear INTEGER
 )
@@ -1122,27 +1125,38 @@ AS $$
 BEGIN
 RETURN QUERY
 
--- Selecting the title information that returns from function
-    
+-- Select title information
+
 SELECT
 t.tconst,
 t.primarytitle,
 t.startyear
 
-FROM public.title AS t
+FROM title t
+JOIN title_word tw
+ON tw.tconst = t.tconst
 
--- Check that every keyword appears in the title
-    
-WHERE
+-- Check the keywords using the inverted index
+
+WHERE tw.field = 'p'
+AND LOWER(tw.word) IN
 (
-SELECT COUNT(*)
-    
-FROM unnest(string_to_array(LOWER(p_query), ' '))
-AS keyword
-WHERE LOWER(t.primarytitle) LIKE '%' || keyword || '%'
-) = array_length(string_to_array(p_query, ' '), 1)
+SELECT LOWER(word)
+FROM unnest(string_to_array(p_query, ' ')) AS word
+)
 
--- Sort results alphabetically
+-- Make sure all keywords are matched
+
+GROUP BY
+t.tconst,
+t.primarytitle,
+t.startyear
+
+HAVING COUNT(DISTINCT tw.word) =
+array_length(string_to_array(p_query, ' '), 1)
+
+-- Show the matching titles alphabetically
+
 ORDER BY t.primarytitle;
 
 END;
@@ -1152,7 +1166,77 @@ $$ LANGUAGE plpgsql;
 -- 2. Test for Exact-Match Querying
 
 SELECT *
-FROM exact_match_query('james bond');
+FROM exact_match_query('James bond');
+
+
+-- =====================================================================
+-- D12_best_match_query
+-- =====================================================================
+
+-- Design decisions:
+-- Uses the existing "title" and "title_word" tables.
+-- Results are ranked by the number of matching keywords.
+
+
+-- 1. Function
+
+DROP FUNCTION IF EXISTS best_match_query(TEXT);
+
+CREATE FUNCTION best_match_query(p_query TEXT)
+
+RETURNS TABLE
+(
+tconst CHARACTER,
+primarytitle TEXT,
+startyear INTEGER,
+matching_keywords BIGINT
+)
+
+AS $$
+BEGIN
+RETURN QUERY
+
+-- Select title information and count matching keywords
+
+SELECT
+t.tconst,
+t.primarytitle,
+t.startyear,
+
+COUNT(DISTINCT tw.word) AS matching_keywords
+
+FROM title t
+JOIN title_word tw
+ON tw.tconst = t.tconst
+
+-- Check which keywords appear in the inverted index
+
+WHERE tw.field = 'p'
+AND LOWER(tw.word) IN
+(
+SELECT LOWER(word)
+FROM unnest(string_to_array(p_query, ' ')) AS word
+)
+
+-- Count the matching keywords for each title
+
+GROUP BY
+t.tconst,
+t.primarytitle,
+t.startyear
+
+-- Show titles with the most matching keywords first
+
+ORDER BY matching_keywords DESC;
+
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- 2. Test for Best-Match Querying
+
+SELECT *
+FROM best_match_query('Avatar');
 
 -- =====================================================================
 -- D13_word_to_words (task 1-D.13)
