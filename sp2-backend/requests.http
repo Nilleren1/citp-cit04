@@ -1,0 +1,7 @@
+# Requests for the API, for the REST Client extension in VS Code.
+#
+# Install "REST Client" by Huachao Mao, start the API with npm start, then
+# click "Send Request" above any request below. Check the status codes, not
+# only the bodies.
+#
+@host = http://localhost:3000

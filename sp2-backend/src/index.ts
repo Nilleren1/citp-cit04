@@ -1,6 +1,14 @@
-function greet(name: string): string {
-  const message = `Hello, ${name}!`;
-  return message;
-}
+// The entry point: create the app, mount the routes, listen.
+//
+//     npm run build
+//     npm start
+//
+// Then send requests with requests.http, or with a browser for the GETs.
 
-console.log(greet('Node.js'));
+import { app } from './app.js';
+
+const port = Number(process.env.PORT ?? 3000);
+
+app.listen(port, () => {
+  console.log(`Listening on http://localhost:${port}`);
+});

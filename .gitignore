@@ -1,6 +1,12 @@
-   # Database backups (too large, download from Moodle)
-   *.backup
+# Database backups (too large, download from Moodle)
+*.backup
 
-   # Test output and local files
-   *.log
-   .env
+# Test output and local files
+*.log
+.env
+.env.*
+!.env.example
+
+# OS files
+Thumbs.db
+.DS_Store
