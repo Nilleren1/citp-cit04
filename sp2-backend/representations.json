@@ -1,229 +1,376 @@
-[
 {
-  "url": "http://localhost:3000/titles/tt0468569",
-  "title": "The Dark Knight",
-  "type": "movie",
-  "originalTitle": "The Dark Knight",
-  "isAdult": false,
-  "startYear": 2008,
-  "endYear": null,
-  "runtimeMinutes": 152,
-  "averageRating": 9.1,
-  "numVotes": 3210389,
-  "plot": "Set within a year after the events of Batman Begins (2005), Batman, Lieutenant James Gordon, and new District Attorney Harvey Dent successfully begin to round up the criminals that plague Gotham City, until a mysterious and sadistic criminal mastermind known only as 'The Joker' appears in Gotham, creating a new wave of chaos. Batman's struggle against The Joker becomes deeply personal, forcing him to 'confront everything he believes' and improve his technology to stop him. A love triangle develops between Bruce Wayne, Dent, and Rachel Dawes.",
-  "genres": ["Crime", "Thriller"],
-  "poster": "https://m.media-amazon.com/images/M/MV5BMTMxNTMwODM0NF5BMl5BanBnXkFtZTcwODAyMTk2Mw@@._V1_SX300.jpg",
-  "cast": [
-    {
-      "url": "http://localhost:3000/persons/nm0000288",
-      "name": "Christian Bale",
-      "workedOn": {
-        "category": "actor",
-        "characters": ["Bruce Wayne"]
-      }
-    },
-    {
-      "url": "http://localhost:3000/persons/nm0000289",
-      "name": "Heath Ledger",
-      "workedOn": {
-        "category": "actor",
-        "characters": ["The Joker"]
-      }
-    }
-  ]
-},
-
-{
-  "url": "http://localhost:3000/titles",
-  "titles": [
-    {
-      "url": "http://localhost:3000/titles/tt0468569",
-      "title": "The Dark Knight",
-      "type": "movie"
-    },
-    {
-      "url": "http://localhost:3000/titles/tt0111161",
-      "title": "The Shawshank Redemption",
-      "type": "movie"
-    }
-  ]
-},
-
-{
-  "url": "http://localhost:3000/persons/nm0000206",
-  "name": "Keanu Reeves",
-  "birthYear": 1964,
-  "deathYear": null,
-  "professions": ["actor", "producer"],
-  "rating": {
-    "rating": 7.7,
-    "numVotes": 805931,
-    "numTitles": 15,
-    "updatedAt": "2026-10-05 12:22:10.046711+02"
-  }
-},
-
-{
-  "url": "http://localhost:3000/persons",
-  "persons": [
-    {
-      "url": "http://localhost:3000/persons/nm0000206",
-      "name": "Keanu Reeves",
-      "professions": ["actor", "producer"]
-    },
-    {
-      "url": "http://localhost:3000/persons/nm0000288",
-      "name": "Christian Bale",
-      "professions": ["actor"]
-    }
-  ]
-},
-
-{
-  "url": "http://localhost:3000/users/42",
-  "username": "user42",
-  "password": "hashed_password_42",
-  "createdAt": "2026-11-02T14:30:00Z"
-},
-
-{
-  "url": "http://localhost:3000/users/42/ratings/tt0468569",
-  "user": { 
-    "url": "http://localhost:3000/users/42", 
-    "username": "user42" 
-  },
-  "title": { 
-    "url": "http://localhost:3000/titles/tt0468569", 
-    "title": "The Dark Knight" 
-  },
-  "rating": 9,
-  "review": "Greatest movier ever made",
-  "createdAt": "2026-11-02T14:30:00Z"
-},
-
-{
-  "url": "http://localhost:3000/users/42/ratings",
-  "ratings": [
-    {
-      "url": "http://localhost:3000/users/42/ratings/tt0468569",
-      "title": {
+    "Title": {
         "url": "http://localhost:3000/titles/tt0468569",
-        "title": "The Dark Knight"
-      },
-      "rating": 9
+        "title": "The Dark Knight",
+        "type": "movie",
+        "originalTitle": "The Dark Knight",
+        "isAdult": false,
+        "startYear": 2008,
+        "endYear": null,
+        "runtimeMinutes": 152,
+        "averageRating": 9.1,
+        "numVotes": 3210389,
+        "plot": "Set within a year after the events of Batman Begins (2005), Batman, Lieutenant James Gordon, and new District Attorney Harvey Dent successfully begin to round up the criminals that plague Gotham City, until a mysterious and sadistic criminal mastermind known only as 'The Joker' appears in Gotham, creating a new wave of chaos. Batman's struggle against The Joker becomes deeply personal, forcing him to 'confront everything he believes' and improve his technology to stop him. A love triangle develops between Bruce Wayne, Dent, and Rachel Dawes.",
+        "genres": [
+            "Crime",
+            "Thriller"
+        ],
+        "poster": "https://m.media-amazon.com/images/M/MV5BMTMxNTMwODM0NF5BMl5BanBnXkFtZTcwODAyMTk2Mw@@._V1_SX300.jpg",
+        "cast": [
+            {
+                "url": "http://localhost:3000/persons/nm0000288",
+                "name": "Christian Bale",
+                "workedOn": {
+                    "category": "actor",
+                    "characters": [
+                        "Bruce Wayne"
+                    ]
+                }
+            },
+            {
+                "url": "http://localhost:3000/persons/nm0000289",
+                "name": "Heath Ledger",
+                "workedOn": {
+                    "category": "actor",
+                    "characters": [
+                        "The Joker"
+                    ]
+                }
+            }
+        ]
     },
-    {
-      "url": "http://localhost:3000/users/42/ratings/tt0111161",
-      "title": {
-        "url": "http://localhost:3000/titles/tt0111161",
-        "title": "The Shawshank Redemption"
-      },
-      "rating": 10
-    }
-  ]
-},
-
-{
-  "url": "http://localhost:3000/users/42/title-bookmarks",
-  "bookmarks": [
-    {
-      "title": {
-        "url": "http://localhost:3000/titles/tt0133093",
-        "title": "The Matrix"
-      },
-      "list": "watchlist",
-      "createdAt": "2026-11-02T14:30:00Z"
+    "TitlePage": {
+        "url": "http://localhost:3000/titles?limit=20&offset=0",
+        "items": [
+            {
+                "url": "http://localhost:3000/titles/tt0468569",
+                "title": "The Dark Knight",
+                "type": "movie",
+                "startYear": 2008,
+                "poster": "https://m.media-amazon.com/images/M/MV5BMTMxNTMwODM0NF5BMl5BanBnXkFtZTcwODAyMTk2Mw@@._V1_SX300.jpg",
+                "averageRating": 9.1
+            },
+            {
+                "url": "http://localhost:3000/titles/tt0111161",
+                "title": "The Shawshank Redemption",
+                "type": "movie",
+                "startYear": 1994,
+                "poster": null,
+                "averageRating": 9.3
+            }
+        ],
+        "limit": 20,
+        "offset": 0,
+        "next": "http://localhost:3000/titles?limit=20&offset=20",
+        "prev": null
     },
-    {
-      "title": {
-        "url": "http://localhost:3000/titles/tt0468569",
-        "title": "The Dark Knight"
-      },
-      "list": "watched",
-      "createdAt": "2026-11-01T10:15:00Z"
-    }
-  ]
-},
-
-{
-  "url": "http://localhost:3000/users/42/person-bookmarks",
-  "bookmarks": [
-    {
-      "person": {
+    "Person": {
         "url": "http://localhost:3000/persons/nm0000206",
-        "name": "Keanu Reeves"
-      },
-      "createdAt": "2026-11-02T14:30:00Z"
+        "name": "Keanu Reeves",
+        "birthYear": 1964,
+        "deathYear": null,
+        "professions": [
+            "actor",
+            "producer"
+        ],
+        "rating": {
+            "rating": 7.7,
+            "numVotes": 805931,
+            "numTitles": 15,
+            "updatedAt": "2026-10-05 12:22:10.046711+02"
+        }
     },
-    {
-      "person": {
-        "url": "http://localhost:3000/persons/nm0000288",
-        "name": "Christian Bale"
-      },
-      "createdAt": "2026-11-01T10:15:00Z"
+    "PersonPage": {
+        "url": "http://localhost:3000/persons?limit=20&offset=0",
+        "items": [
+            {
+                "url": "http://localhost:3000/persons/nm0000206",
+                "name": "Keanu Reeves",
+                "professions": [
+                    "actor",
+                    "producer"
+                ]
+            },
+            {
+                "url": "http://localhost:3000/persons/nm0000288",
+                "name": "Christian Bale",
+                "professions": [
+                    "actor"
+                ]
+            }
+        ],
+        "limit": 20,
+        "offset": 0,
+        "next": null,
+        "prev": null
+    },
+    "CoPlayerPage": {
+        "url": "http://localhost:3000/persons/nm0000206/co-players?limit=20&offset=0",
+        "items": [
+            {
+                "url": "http://localhost:3000/persons/nm0000401",
+                "name": "Laurence Fishburne",
+                "titleCount": 4
+            },
+            {
+                "url": "http://localhost:3000/persons/nm0005251",
+                "name": "Carrie-Anne Moss",
+                "titleCount": 4
+            }
+        ],
+        "limit": 20,
+        "offset": 0,
+        "next": null,
+        "prev": null
+    },
+    "KeywordPage": {
+        "url": "http://localhost:3000/persons/nm0000206/keywords?limit=10&offset=0",
+        "items": [
+            {
+                "word": "hacker",
+                "weight": 14,
+                "search": "http://localhost:3000/titles?q=hacker&match=best"
+            },
+            {
+                "word": "neo",
+                "weight": 9,
+                "search": "http://localhost:3000/titles?q=neo&match=best"
+            }
+        ],
+        "limit": 10,
+        "offset": 0,
+        "next": null,
+        "prev": null
+    },
+    "User": {
+        "url": "http://localhost:3000/users/42",
+        "username": "user42",
+        "createdAt": "2026-11-02T14:30:00Z"
+    },
+    "Token": {
+        "token": "eyJhbGciOi...",
+        "tokenType": "Bearer",
+        "expiresAt": "2026-11-02T15:30:00Z",
+        "user": {
+            "url": "http://localhost:3000/users/42",
+            "username": "user42"
+        }
+    },
+    "Rating": {
+        "url": "http://localhost:3000/users/42/ratings/tt0468569",
+        "user": {
+            "url": "http://localhost:3000/users/42",
+            "username": "user42"
+        },
+        "title": {
+            "url": "http://localhost:3000/titles/tt0468569",
+            "title": "The Dark Knight"
+        },
+        "rating": 9,
+        "review": "Greatest movie ever made",
+        "createdAt": "2026-11-02T14:30:00Z"
+    },
+    "RatingPage": {
+        "url": "http://localhost:3000/users/42/ratings?limit=20&offset=0",
+        "items": [
+            {
+                "url": "http://localhost:3000/users/42/ratings/tt0468569",
+                "title": {
+                    "url": "http://localhost:3000/titles/tt0468569",
+                    "title": "The Dark Knight"
+                },
+                "rating": 9,
+                "review": "Greatest movie ever made",
+                "createdAt": "2026-11-02T14:30:00Z"
+            },
+            {
+                "url": "http://localhost:3000/users/42/ratings/tt0111161",
+                "title": {
+                    "url": "http://localhost:3000/titles/tt0111161",
+                    "title": "The Shawshank Redemption"
+                },
+                "rating": 10,
+                "review": null,
+                "createdAt": "2026-11-01T10:15:00Z"
+            }
+        ],
+        "limit": 20,
+        "offset": 0,
+        "next": null,
+        "prev": null
+    },
+    "TitleBookmarkPage": {
+        "url": "http://localhost:3000/users/42/title-bookmarks?limit=20&offset=0",
+        "items": [
+            {
+                "url": "http://localhost:3000/users/42/title-bookmarks/tt0133093",
+                "title": {
+                    "url": "http://localhost:3000/titles/tt0133093",
+                    "title": "The Matrix"
+                },
+                "list": "watchlist",
+                "createdAt": "2026-11-02T14:30:00Z"
+            },
+            {
+                "url": "http://localhost:3000/users/42/title-bookmarks/tt0468569",
+                "title": {
+                    "url": "http://localhost:3000/titles/tt0468569",
+                    "title": "The Dark Knight"
+                },
+                "list": "watched",
+                "createdAt": "2026-11-01T10:15:00Z"
+            }
+        ],
+        "limit": 20,
+        "offset": 0,
+        "next": null,
+        "prev": null
+    },
+    "PersonBookmarkPage": {
+        "url": "http://localhost:3000/users/42/person-bookmarks?limit=20&offset=0",
+        "items": [
+            {
+                "url": "http://localhost:3000/users/42/person-bookmarks/nm0000206",
+                "person": {
+                    "url": "http://localhost:3000/persons/nm0000206",
+                    "name": "Keanu Reeves"
+                },
+                "createdAt": "2026-11-02T14:30:00Z"
+            },
+            {
+                "url": "http://localhost:3000/users/42/person-bookmarks/nm0000288",
+                "person": {
+                    "url": "http://localhost:3000/persons/nm0000288",
+                    "name": "Christian Bale"
+                },
+                "createdAt": "2026-11-01T10:15:00Z"
+            }
+        ],
+        "limit": 20,
+        "offset": 0,
+        "next": null,
+        "prev": null
+    },
+    "SearchHistoryPage": {
+        "url": "http://localhost:3000/users/42/search-history?limit=20&offset=0",
+        "items": [
+            {
+                "url": "http://localhost:3000/users/42/search-history/917",
+                "query": "batman",
+                "createdAt": "2026-11-02T14:30:00Z"
+            },
+            {
+                "url": "http://localhost:3000/users/42/search-history/916",
+                "query": "The Dark Knight",
+                "createdAt": "2026-11-02T14:25:00Z"
+            },
+            {
+                "url": "http://localhost:3000/users/42/search-history/915",
+                "query": "inception",
+                "createdAt": "2026-11-02T14:22:00Z"
+            }
+        ],
+        "limit": 20,
+        "offset": 0,
+        "next": null,
+        "prev": null
+    },
+    "TrendingSearchPage": {
+        "url": "http://localhost:3000/trending-searches?limit=20&offset=0",
+        "items": [
+            {
+                "query": "batman",
+                "count": 57,
+                "search": "http://localhost:3000/titles?q=batman"
+            },
+            {
+                "query": "inception",
+                "count": 41,
+                "search": "http://localhost:3000/titles?q=inception"
+            }
+        ],
+        "limit": 20,
+        "offset": 0,
+        "next": null,
+        "prev": null
+    },
+    "RequestBodies": {
+        "POST /users": {
+            "username": "user42",
+            "password": "a-long-password"
+        },
+        "POST /tokens": {
+            "username": "user42",
+            "password": "a-long-password"
+        },
+        "PATCH /users/{userId}": {
+            "username": "newname"
+        },
+        "PUT /users/{userId}/password": {
+            "currentPassword": "a-long-password",
+            "newPassword": "another-long-password"
+        },
+        "POST /users/{userId}/ratings": {
+            "title": "http://localhost:3000/titles/tt0468569",
+            "rating": 9,
+            "review": "Greatest movie ever made"
+        },
+        "PUT /users/{userId}/ratings/{tconst}": {
+            "rating": 8,
+            "review": null
+        },
+        "POST /users/{userId}/title-bookmarks": {
+            "title": "http://localhost:3000/titles/tt0133093",
+            "list": "watchlist"
+        },
+        "PUT /users/{userId}/title-bookmarks/{tconst}": {
+            "list": "watched"
+        },
+        "POST /users/{userId}/person-bookmarks": {
+            "person": "http://localhost:3000/persons/nm0000206"
+        }
+    },
+    "Errors": {
+        "not_found_404": {
+            "status": 404,
+            "error": "not_found",
+            "message": "No title with id tt0000000.",
+            "details": []
+        },
+        "validation_failed_400": {
+            "status": 400,
+            "error": "validation_failed",
+            "message": "The request is not valid.",
+            "details": [
+                {
+                    "field": "rating",
+                    "message": "Must be an integer between 1 and 10."
+                }
+            ]
+        },
+        "unauthorized_401": {
+            "status": 401,
+            "error": "unauthorized",
+            "message": "Authentication is required.",
+            "details": []
+        },
+        "forbidden_403": {
+            "status": 403,
+            "error": "forbidden",
+            "message": "You do not have permission to access this resource.",
+            "details": []
+        },
+        "conflict_409": {
+            "status": 409,
+            "error": "conflict",
+            "message": "That username is already taken.",
+            "details": []
+        },
+        "internal_error_500": {
+            "status": 500,
+            "error": "internal_error",
+            "message": "Something went wrong.",
+            "details": []
+        }
     }
-  ]
-},
-
-{
-  "url": "http://localhost:3000/users/42/search-history",
-  "searchHistory": [
-    {
-      "query": "batman",
-      "searchedAt": "2026-11-02T14:30:00Z"
-    },
-    {
-      "query": "The Dark Knight",
-      "searchedAt": "2026-11-02T14:25:00Z"
-    },
-    {
-      "query": "inception",
-      "searchedAt": "2026-11-02T14:22:00Z"
-    }
-  ]
-},
-
-{
-  "status": 404,
-  "error": "not_found",
-  "message": "No title with id tt0000000.",
-  "details": []
-},
-
-{
-  "status": 400,
-  "error": "validation_failed",
-  "message": "The request is not valid.",
-  "details": [
-    { "field": "rating", "message": "Must be an integer between 1 and 10." }
-  ]
-},
-
-{
-  "status": 401,
-  "error": "unauthorized",
-  "message": "Authentication is required.",
-  "details": []
-},
-
-{
-  "status": 403,
-  "error": "forbidden",
-  "message": "You do not have permission to access this resource.",
-  "details": []
-},
-
-{
-  "status": 409,
-  "error": "conflict",
-  "message": "That username is already taken.",
-  "details": []
-},
-
-{
-  "status": 500,
-  "error": "internal_error",
-  "message": "Something went wrong.",
-  "details": []
 }
-]
