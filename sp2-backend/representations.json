@@ -123,6 +123,30 @@
         "next": null,
         "prev": null
     },
+    "Keywords": {
+        "url": "http://localhost:3000/keywords?q=batman+joker&limit=20&offset=0",
+        "items": [
+            {
+                "word": "gotham",
+                "frequency": 41,
+                "search": "http://localhost:3000/titles?q=batman+joker+gotham&match=exact"
+            },
+            {
+                "word": "dark",
+                "frequency": 33,
+                "search": "http://localhost:3000/titles?q=batman+joker+dark&match=exact"
+            },
+            {
+                "word": "knight",
+                "frequency": 29,
+                "search": "http://localhost:3000/titles?q=batman+joker+knight&match=exact"
+            }
+        ],
+        "limit": 20,
+        "offset": 0,
+        "next": "http://localhost:3000/keywords?q=batman+joker&limit=20&offset=20",
+        "prev": null
+    },
     "User": {
         "url": "http://localhost:3000/users/42",
         "username": "user42",
