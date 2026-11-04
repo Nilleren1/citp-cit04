@@ -123,25 +123,6 @@
         "next": null,
         "prev": null
     },
-    "KeywordPage": {
-        "url": "http://localhost:3000/persons/nm0000206/keywords?limit=10&offset=0",
-        "items": [
-            {
-                "word": "hacker",
-                "weight": 14,
-                "search": "http://localhost:3000/titles?q=hacker&match=best"
-            },
-            {
-                "word": "neo",
-                "weight": 9,
-                "search": "http://localhost:3000/titles?q=neo&match=best"
-            }
-        ],
-        "limit": 10,
-        "offset": 0,
-        "next": null,
-        "prev": null
-    },
     "User": {
         "url": "http://localhost:3000/users/42",
         "username": "user42",
