@@ -61,17 +61,15 @@ const cast = await getTitleCast(String(req.params.tconst));
 res.json(
 {
 url: `${req.protocol}://${req.get('host')}/titles/${title.tconst}`,
-title: title.primarytitle,
-type: title.titletype,
-originalTitle: title.originaltitle,
-isAdult: title.isadult,
-startYear: title.startyear,
-endYear: title.endyear,
-runtimeMinutes: title.runtimeminutes,
-averageRating: title.averagerating === null
-? null
-: Number(title.averagerating),
-numVotes: title.numvotes,
+title: title.primaryTitle,
+type: title.titleType,
+originalTitle: title.originalTitle,
+isAdult: title.isAdult,
+startYear: title.startYear,
+endYear: title.endYear,
+runtimeMinutes: title.runtimeMinutes,
+averageRating: title.averageRating,
+numVotes: title.numVotes,
 plot: title.plot,
 poster: title.poster,
 genres: genres,
@@ -93,7 +91,8 @@ characters: person.characters ?? []
 titles.get('/:tconst/cast', async (req, res) => 
 {
 const tconst = String(req.params.tconst);
-
+const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
+const offset = Math.max(Number(req.query.offset) || 0, 0);
 const title = await findTitle(tconst);
 
 if (title === undefined) 
@@ -101,7 +100,7 @@ if (title === undefined)
 return res.status(404).json({ error: 'Title not found' });
 }
 
-const cast = await getTitleCast(tconst);
+const cast = await getTitleCast(tconst, limit, offset);
 
 res.json(cast.map(person => 
 ({
@@ -123,8 +122,9 @@ return res.status(404).json({ error: 'Title not found' });
 }
 
 const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
+const offset = Math.max(Number(req.query.offset) || 0, 0);
 
-const similar = await getSimilarTitles(tconst, limit);
+const similar = await getSimilarTitles(tconst, limit, offset);
 
 res.json(similar.map(movie =>
 ({
@@ -136,6 +136,8 @@ url: `/titles/${movie.tconst}`
 titles.get('/:tconst/ratings', async (req, res) =>
 {
 const tconst = String(req.params.tconst);
+const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
+const offset = Math.max(Number(req.query.offset) || 0, 0);
 
 const title = await findTitle(tconst);
 
@@ -144,7 +146,7 @@ if (title === undefined)
 return res.status(404).json({ error: 'Title not found' });
 }
 
-const ratings = await getTitleRatings(tconst);
+const ratings = await getTitleRatings(tconst, limit, offset);
 
 res.json(ratings);
 });
