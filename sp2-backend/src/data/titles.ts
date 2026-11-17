@@ -21,6 +21,15 @@ export interface CastRow {
   characters: string | null;
 }
 
+export interface TitleSummary {
+  tconst: string;
+  title: string;
+  type: string;
+  startYear: number | null;
+  poster: string | null;
+  averageRating: number | null;
+}
+
 export interface SimilarTitleRow {
   tconst: string;
   primarytitle: string;
