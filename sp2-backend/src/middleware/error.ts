@@ -1,8 +1,14 @@
-export function errorHandler(
-  // TODO: Add the correct types for the parameters of this function.
-  err: any,
-    req: any,
-    res: any,
-    next: any
-) {
-}
+import type { ErrorRequestHandler } from 'express';
+
+export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
+  console.error('API error:', err);
+
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
+
+  res.status(500).json({
+    error: 'Internal server error'
+  });
+};
