@@ -8,6 +8,7 @@ const MAX_INT = 2147483647;
 const patterns = {
   userId: /^[1-9]\d*$/,
   tconst: /^tt\d{7,9}$/,
+  nconst: /^nm\d{7,9}$/,
 };
 
 export const checkParam =
@@ -38,3 +39,11 @@ export const paging: RequestHandler = (req, res, next) => {
   res.locals.paging = { limit, offset };
   next();
 };
+
+export const oneOf =
+  (name: string, values: readonly string[]): RequestHandler =>
+  (req, _res, next) => {
+    const v = req.query[name];
+    if (v === undefined) return next();
+    next(typeof v === 'string' && values.includes(v) ? undefined : validationError(name, `Must be one of: ${values.join(', ')}.`));
+  };
