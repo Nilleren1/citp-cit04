@@ -14,10 +14,7 @@ export interface UserCredentials {
   passwordHash: string;
 }
 
-/**
- * Creates a user through create_user() and returns the new id. The password
- * must already be hashed. A taken username raises unique_violation (23505).
- */
+/** Creates a user through create_user() and returns the new id. */
 export async function create(username: string, passwordHash: string): Promise<number> {
   const { rows } = await pool.query<{ userId: number }>(
     `SELECT create_user($1, $2) AS "userId"`,

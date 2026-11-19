@@ -4,6 +4,7 @@ import { titles } from './routes/titles.js';
 //import { users } from './routes/users.js';
 import ratings from './routes/ratings.js';
 import bookmarks from './routes/bookmarks.js';
+import users from './routes/users.js';
 
 export const app = express();
 
@@ -14,6 +15,7 @@ app.use('/titles', titles);
 
 app.use(ratings);
 app.use(bookmarks);
+app.use(users);
 
 app.use(notFound);
 app.use(errorHandler);   
