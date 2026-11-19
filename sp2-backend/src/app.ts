@@ -1,7 +1,7 @@
 import express from 'express';
-import { errorHandler } from './middleware/error.js';
+import { errorHandler, notFound } from './middleware/errors.js';
 import { titles } from './routes/titles.js';
-import { users } from './routes/users.js';
+//import { users } from './routes/users.js';
 import ratings from './routes/ratings.js';
 
 export const app = express();
@@ -9,8 +9,9 @@ export const app = express();
 app.use(express.json());
 
 app.use('/titles', titles);
-app.use('/users', users);
+//app.use('/users', users);
 
-app.use('/ratings', ratings);
+app.use(ratings);
 
-app.use(errorHandler);
+app.use(notFound);
+app.use(errorHandler);   

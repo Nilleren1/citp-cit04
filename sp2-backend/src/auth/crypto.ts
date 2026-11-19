@@ -27,7 +27,7 @@ if (!JWT_SECRET) {
 export function generateToken(userId: number): string {
     return jwt.sign(
         { sub: String(userId) },
-        JWT_SECRET,
+        JWT_SECRET!,
         {
             expiresIn: '1h',
             algorithm: 'HS256'

@@ -1,222 +1,106 @@
-
-import { Router, type Request } from 'express';
+import { Router } from 'express';
 import * as ratingsService from '../services/ratings.js';
-import { toRatingDto } from '../dto/rating.js';
+import { toRatingDto } from '../dto/ratings.js';
+import { buildPage } from './page.js';
+import { BASE_URL } from '../config.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { requireOwnership } from '../middleware/authorize.js';
+import { checkParam, paging } from '../middleware/validate.js';
+import { ApiError, ErrorDetail } from '../middleware/errors.js';
 
-const ratings = Router();
+const router = Router();
 
-function getBaseUrl(req: Request): string {
-  return `${req.protocol}://${req.get('host')}`;
+const owner = [authenticate, requireOwnership];
+
+router.param('userId', checkParam('userId'));
+router.param('tconst', checkParam('tconst'));
+
+const TITLE_URL = new RegExp(`^${BASE_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/titles/(tt\\d{7,9})$`);
+
+function readRatingBody(body: unknown, withTitle: boolean) {
+  const b = (typeof body === 'object' && body !== null ? body : {}) as Record<string, unknown>;
+  const details: ErrorDetail[] = [];
+
+  let tconst = '';
+  if (withTitle) {
+    const match = typeof b.title === 'string' ? TITLE_URL.exec(b.title) : null;
+    if (match) tconst = match[1];
+    else details.push({ field: 'title', message: 'Must be the URL of a title.' });
+  }
+
+  const rating = b.rating;
+  if (typeof rating !== 'number' || !Number.isInteger(rating) || rating < 1 || rating > 10) {
+    details.push({ field: 'rating', message: 'Must be an integer between 1 and 10.' });
+  }
+
+  const review = b.review ?? null;
+  if (review !== null && typeof review !== 'string') {
+    details.push({ field: 'review', message: 'Must be a string or null.' });
+  }
+
+  if (details.length > 0) {
+    throw new ApiError(400, 'validation_failed', 'The request is not valid.', details);
+  }
+  return { tconst, rating: rating as number, review: review as string | null };
 }
 
-function parsePagination(req: Request) {
-  const limit = req.query.limit === undefined ? 20 : Number(req.query.limit);
-  const offset = req.query.offset === undefined ? 0 : Number(req.query.offset);
+router.get('/users/:userId/ratings', paging, async (req, res) => {
+  const { limit, offset } = res.locals.paging;
+  const rows = await ratingsService.listByUser(Number(req.params.userId), limit + 1, offset);
+  if (!rows) throw new ApiError(404, 'not_found', 'No such user.');
 
-  if (!Number.isInteger(limit) || limit < 1 || limit > 100 || !Number.isInteger(offset) || offset < 0) {
-    return undefined;
-  }
-
-  return { limit, offset };
-}
-
-function isValidTconst(value: unknown): value is string {
-  return typeof value === 'string' && /^tt\d+$/.test(value);
-}
-
-function isRatingBody(body: unknown): body is { rating: number; review?: string | null } {
-  if (typeof body !== 'object' || body === null || !('rating' in body)) {
-    return false;
-  }
-
-  const value = body as { rating: unknown; review?: unknown };
-
-  return (
-    Number.isInteger(value.rating) &&
-    typeof value.rating === 'number' &&
-    value.rating >= 1 &&
-    value.rating <= 10 &&
-    (value.review === undefined ||
-      value.review === null ||
-      typeof value.review === 'string')
-  );
-}
-
-ratings.get('/users/:userId/ratings', authenticate, requireOwnership, async (req, res, next) => {
-  try {
-    const userId = Number(req.params.userId);
-    const pagination = parsePagination(req);
-
-    if (!pagination) {
-      res.status(400).json({ error: 'validation_failed' });
-      return;
-    }
-
-    const result = await ratingsService.listByUser(
-      userId,
-      pagination.limit,
-      pagination.offset,
-    );
-
-    const base = getBaseUrl(req);
-
-    res.status(200).json({
-      url: `${base}/users/${userId}/ratings`,
-      ratings: result.map(r => toRatingDto(r, base)),
-      ...pagination,
-    });
-  } catch (err) {
-    next(err);
-  }
+  res.json(buildPage(req, rows, limit, offset, (r) => toRatingDto(r, BASE_URL)));
 });
 
-ratings.get('/users/:userId/ratings/:tconst', authenticate, requireOwnership, async (req, res, next) => {
-  try {
-    const userId = Number(req.params.userId);
-    const { tconst } = req.params;
+router.get('/users/:userId/ratings/:tconst', async (req, res) => {
+  const rating = await ratingsService.find(Number(req.params.userId), String(req.params.tconst));
+  if (!rating) throw new ApiError(404, 'not_found', 'No such rating.');
 
-    if (!isValidTconst(tconst)) {
-      res.status(400).json({ error: 'validation_failed' });
-      return;
-    }
-
-    const rating = await ratingsService.find(userId, tconst);
-
-    if (!rating) {
-      res.status(404).json({ error: 'not_found' });
-      return;
-    }
-
-    res.status(200).json(toRatingDto(rating, getBaseUrl(req)));
-  } catch (err) {
-    next(err);
-  }
+  res.json(toRatingDto(rating, BASE_URL));
 });
 
-ratings.post('/users/:userId/ratings/:tconst', authenticate, requireOwnership, async (req, res, next) => {
-  try {
-    const userId = Number(req.params.userId);
-    const { tconst } = req.params;
+router.get('/titles/:tconst/ratings', paging, async (req, res) => {
+  const { limit, offset } = res.locals.paging;
+  const rows = await ratingsService.listByTitle(String(req.params.tconst), limit + 1, offset);
+  if (!rows) throw new ApiError(404, 'not_found', 'No such title.');
 
-    if (!isValidTconst(tconst) || !isRatingBody(req.body)) {
-      res.status(400).json({ error: 'validation_failed' });
-      return;
-    }
-
-    const result = await ratingsService.create(
-      userId,
-      tconst,
-      req.body.rating,
-      req.body.review ?? null,
-    );
-
-    if (result === 'already-exists') {
-      res.status(409).json({ error: 'conflict' });
-      return;
-    }
-
-    const rating = await ratingsService.find(userId, tconst);
-
-    if (!rating) {
-      res.status(500).json({ error: 'internal_error' });
-      return;
-    }
-
-    res
-      .status(201)
-      .location(`${getBaseUrl(req)}/users/${userId}/ratings/${tconst}`)
-      .json(toRatingDto(rating, getBaseUrl(req)));
-  } catch (err) {
-    next(err);
-  }
+  res.json(buildPage(req, rows, limit, offset, (r) => toRatingDto(r, BASE_URL)));
 });
 
-ratings.put('/users/:userId/ratings/:tconst', authenticate, requireOwnership, async (req, res, next) => {
-  try {
-    const userId = Number(req.params.userId);
-    const { tconst } = req.params;
+router.post('/users/:userId/ratings', ...owner, async (req, res) => {
+  const userId = Number(req.params.userId);
+  const { tconst, rating, review } = readRatingBody(req.body, true);
 
-    if (!isValidTconst(tconst) || !isRatingBody(req.body)) {
-      res.status(400).json({ error: 'validation_failed' });
-      return;
-    }
+  const result = await ratingsService.create(userId, tconst, rating, review);
+  if (result === 'no-such-title') throw new ApiError(404, 'not_found', 'No such title.');
+  if (result === 'already-exists') throw new ApiError(409, 'conflict', 'You have already rated this title.');
 
-    const result = await ratingsService.update(
-      userId,
-      tconst,
-      req.body.rating,
-      req.body.review ?? null,
-    );
+  const created = await ratingsService.find(userId, tconst);
+  if (!created) throw new Error('A rating that was just created could not be read.');
 
-    if (result === 'not-found') {
-      res.status(404).json({ error: 'not_found' });
-      return;
-    }
-
-    const rating = await ratingsService.find(userId, tconst);
-
-    if (!rating) {
-      res.status(500).json({ error: 'internal_error' });
-      return;
-    }
-
-    res.status(200).json(toRatingDto(rating, getBaseUrl(req)));
-  } catch (err) {
-    next(err);
-  }
+  res
+    .status(201)
+    .location(`${BASE_URL}/users/${userId}/ratings/${tconst}`)
+    .json(toRatingDto(created, BASE_URL));
 });
 
-ratings.delete('/users/:userId/ratings/:tconst', authenticate, requireOwnership, async (req, res, next) => {
-  try {
-    const userId = Number(req.params.userId);
-    const { tconst } = req.params;
+router.put('/users/:userId/ratings/:tconst', ...owner, async (req, res) => {
+  const userId = Number(req.params.userId);
+  const { rating, review } = readRatingBody(req.body, false);
 
-    if (!isValidTconst(tconst)) {
-      res.status(400).json({ error: 'validation_failed' });
-      return;
-    }
+  const result = await ratingsService.update(userId, String(req.params.tconst), rating, review);
+  if (result === 'not-found') throw new ApiError(404, 'not_found', 'No such rating.');
 
-    const removed = await ratingsService.remove(userId, tconst);
+  const updated = await ratingsService.find(userId, String(req.params.tconst));
+  if (!updated) throw new Error('A rating that was just updated could not be read.');
 
-    if (!removed) {
-      res.status(404).json({ error: 'not_found' });
-      return;
-    }
-
-    res.status(204).send();
-  } catch (err) {
-    next(err);
-  }
+  res.json(toRatingDto(updated, BASE_URL));
 });
 
-ratings.get('/titles/:tconst/ratings', async (req, res, next) => {
-  try {
-    const { tconst } = req.params;
-    const pagination = parsePagination(req);
-
-    if (!isValidTconst(tconst) || !pagination) {
-      res.status(400).json({ error: 'validation_failed' });
-      return;
-    }
-
-    const result = await ratingsService.listByTitle(
-      tconst,
-      pagination.limit,
-      pagination.offset,
-    );
-
-    const base = getBaseUrl(req);
-
-    res.status(200).json({
-      url: `${base}/titles/${tconst}/ratings`,
-      ratings: result.map(r => toRatingDto(r, base)),
-      ...pagination,
-    });
-  } catch (err) {
-    next(err);
-  }
+router.delete('/users/:userId/ratings/:tconst', ...owner, async (req, res) => {
+  // Repeating a DELETE is not an error: the rating is gone either way
+  await ratingsService.remove(Number(req.params.userId), String(req.params.tconst));
+  res.status(204).send();
 });
 
-export default ratings;
+export default router;

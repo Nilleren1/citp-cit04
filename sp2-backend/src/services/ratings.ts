@@ -1,20 +1,26 @@
 
 import { pool } from '../db.js';
 import * as ratings from '../data/ratings.js';
+import * as titles from '../data/titles.js';
+import * as users from '../data/users.js';
 
 export async function listByUser(userId: number, limit: number, offset: number) {
-    return ratings.listByUser(userId, limit, offset);
+  if (!(await users.find(userId))) return undefined;
+  return ratings.listByUser(userId, limit, offset);
 }
 
 export async function listByTitle(tconst: string, limit: number, offset: number) {
-    return ratings.listByTitle(tconst, limit, offset);
+  if (!(await titles.exists(tconst))) return undefined;
+  return ratings.listByTitle(tconst, limit, offset);
 }
 
 export async function find(userId: number, tconst: string) {
     return ratings.find(userId, tconst);
 }
 
-export async function create(userId: number, tconst: string, rating: number, review: string | null): Promise<'created' | 'already-exists'> {
+export async function create(userId: number, tconst: string, rating: number, review: string | null): Promise<'created' | 'already-exists' | 'no-such-title'> {
+    if (!(await titles.exists(tconst))) return 'no-such-title';
+
     const client = await pool.connect();
 
     try {
@@ -38,6 +44,8 @@ export async function create(userId: number, tconst: string, rating: number, rev
 }
 
 export async function update(userId: number, tconst: string, rating: number, review: string | null): Promise<'updated' | 'not-found'> {
+    if (!(await titles.exists(tconst))) return 'not-found';
+
     const client = await pool.connect();
 
     try {
@@ -61,5 +69,6 @@ export async function update(userId: number, tconst: string, rating: number, rev
 }
 
 export async function remove(userId: number, tconst: string): Promise<boolean> {
+    if (!(await titles.exists(tconst))) return false;
     return ratings.remove(userId, tconst);
 }
