@@ -20,6 +20,7 @@ export interface Person extends PersonSummary {
   ratingUpdatedAt: Date | null;
 }
 
+/** An actor who acted in the same titles as another actor, and in how many. */
 export interface CoPlayer {
   nconst: string;
   name: string;
@@ -35,6 +36,8 @@ export type PersonSearch =
   | { q: string }
   | { name?: string; profession?: string; title?: string; character?: string };
 
+// The SELECT list for a PersonSummary; the query must call the person table p.
+// nconst is character(10) in the database, so rtrim removes the padding.
 const SUMMARY_COLUMNS = `
   rtrim(p.nconst) AS nconst,
   p.primaryname AS name,
@@ -43,11 +46,13 @@ const SUMMARY_COLUMNS = `
         WHERE pp.nconst = p.nconst
         ORDER BY pp.profession_name) AS professions`;
 
+/** Whether a person with this nconst exists. Used to give a 404 before listing their co-players. */
 export async function exists(nconst: string): Promise<boolean> {
   const { rowCount } = await pool.query(`SELECT 1 FROM person WHERE nconst = $1`, [nconst]);
   return (rowCount ?? 0) > 0;
 }
 
+/** One person with their rating, or undefined if there is none. */
 export async function find(nconst: string): Promise<Person | undefined> {
   const { rows } = await pool.query<Person>(
     `SELECT ${SUMMARY_COLUMNS},

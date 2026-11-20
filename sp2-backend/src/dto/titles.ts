@@ -1,6 +1,9 @@
+// The JSON shapes of titles, and the functions that build them from the database rows.
+
 import { TitleSummary, Title, CastMember } from '../data/titles.js';
 import { titleUrl, personUrl } from './shared.js';
 
+/** A title in a list (an item in GET /titles and GET /titles/:tconst/similar-titles). */
 export interface TitleSummaryDto {
   url: string;
   title: string;
@@ -21,6 +24,7 @@ export function toTitleSummaryDto(t: TitleSummary, base: string): TitleSummaryDt
   };
 }
 
+/** A credit in a title's cast, with the person's url (an item in GET /titles/:tconst/cast). */
 export interface CastMemberDto {
   url: string;
   name: string;
@@ -30,6 +34,7 @@ export interface CastMemberDto {
   };
 }
 
+/** GET /titles/:tconst. cast holds only the first few credits; the full list is at /titles/:tconst/cast. */
 export interface TitleDto {
   url: string;
   title: string;

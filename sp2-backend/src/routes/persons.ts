@@ -13,6 +13,7 @@ export const persons = Router();
 
 persons.param('nconst', checkParam('nconst'));
 
+/** The query parameters of the structured search. */
 const STRUCTURED = ['name', 'profession', 'title', 'character'] as const;
 
 const notFound = (nconst: string) => new ApiError(404, 'not_found', `No person with id ${nconst}.`);
@@ -42,6 +43,7 @@ persons.get('/', paging, async (req, res) => {
   // Log the search in the user's history once, on the first page, not again when paging.
   const userId = offset === 0 ? (req.user?.id ?? null) : null;
 
+  // One row more than the page size tells buildPage whether there is a next page.
   const rows = search
     ? await personData.search(search, userId, limit + 1, offset)
     : await personData.list(limit + 1, offset);

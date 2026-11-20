@@ -1,3 +1,5 @@
+// Helpers for reading the search parameters in the query string.
+
 import type { Request } from 'express';
 import { validationError } from '../middleware/errors.js';
 

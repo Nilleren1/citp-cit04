@@ -17,6 +17,7 @@ titles.param('tconst', checkParam('tconst'));
 /** How many cast members GET /titles/:tconst includes. The full list is at /titles/:tconst/cast. */
 const CAST_PREVIEW = 10;
 
+/** The query parameters of the structured search. */
 const STRUCTURED = ['title', 'plot', 'character', 'person'] as const;
 
 const notFound = (tconst: string) => new ApiError(404, 'not_found', `No title with id ${tconst}.`);
@@ -30,6 +31,7 @@ const notFound = (tconst: string) => new ApiError(404, 'not_found', `No title wi
  */
 function readSearch(req: Request): titleData.TitleSearch | null {
   const q = queryText(req, 'q');
+  // The oneOf middleware has already checked that match is 'exact' or 'best'.
   const match = queryText(req, 'match') as 'exact' | 'best' | undefined;
   const fields = queryFields(req, STRUCTURED);
   const structured = Object.keys(fields).length > 0;
@@ -49,6 +51,7 @@ titles.get('/', oneOf('match', ['exact', 'best']), paging, async (req, res) => {
   // Log the search in the user's history once, on the first page, not again when paging.
   const userId = offset === 0 ? (req.user?.id ?? null) : null;
 
+  // One row more than the page size tells buildPage whether there is a next page.
   const rows = search
     ? await titleData.search(search, userId, limit + 1, offset)
     : await titleData.list(limit + 1, offset);

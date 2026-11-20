@@ -24,6 +24,7 @@ export interface Title extends TitleSummary {
   genres: string[];
 }
 
+/** One credit in a title's cast and crew. */
 export interface CastMember {
   nconst: string;
   name: string;
@@ -42,6 +43,8 @@ export type TitleSearch =
   | { q: string; match: 'substring' | 'exact' | 'best' }
   | { title?: string; plot?: string; character?: string; person?: string };
 
+// The SELECT list for a TitleSummary; the query must call the title table t.
+// tconst is character(10) in the database, so rtrim removes the padding.
 const SUMMARY_COLUMNS = `
   rtrim(t.tconst) AS tconst,
   t.primarytitle AS title,
@@ -50,11 +53,13 @@ const SUMMARY_COLUMNS = `
   t.poster,
   t.averagerating::float8 AS "averageRating"`;
 
+/** Whether a title with this tconst exists. Used to give a 404 before listing its cast or similar titles. */
 export async function exists(tconst: string): Promise<boolean> {
   const { rowCount } = await pool.query(`SELECT 1 FROM title WHERE tconst = $1`, [tconst]);
   return (rowCount ?? 0) > 0;
 }
 
+/** One title with its genres, or undefined if there is none. */
 export async function find(tconst: string): Promise<Title | undefined> {
   const { rows } = await pool.query<Title>(
     `SELECT ${SUMMARY_COLUMNS},
@@ -141,6 +146,7 @@ export async function cast(tconst: string, limit: number, offset: number): Promi
 /** Titles similar to the given one, most similar first, through get_similar_titles (D9). */
 export async function similar(tconst: string, limit: number, offset: number): Promise<TitleSummary[]> {
   const { rows } = await pool.query<TitleSummary>(
+    // get_similar_titles takes how many rows to return, so ask for enough to cover this page.
     `SELECT ${SUMMARY_COLUMNS}
      FROM get_similar_titles($1, $2)
           WITH ORDINALITY AS s(tconst, primarytitle, score, shared_genres, shared_people, n)
