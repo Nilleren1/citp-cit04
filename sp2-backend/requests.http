@@ -4,4 +4,180 @@
 # click "Send Request" above any request below. Check the status codes, not
 # only the bodies.
 #
-@host = http://localhost:3000
+@base = http://localhost:3000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTUwODk2ODcsImV4cCI6MTc5NTA5MzI4Nywic3ViIjoiNiJ9.VlsMgMij0oEJxs86cFns4jlqEyjRpdeOrWKKtOpXcyc
+@user = 6
+@userId = 81
+
+### Reviews of a title (public)
+GET {{base}}/titles/tt0816692/ratings
+
+### Paging
+GET {{base}}/titles/tt0816692/ratings?limit=2&offset=0
+
+### Create a rating
+POST {{base}}/users/{{user}}/ratings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "title": "http://localhost:3000/titles/tt0112130", "rating": 9, "review": "Great" }
+
+### Create again (expect 409)
+POST {{base}}/users/{{user}}/ratings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "title": "http://localhost:3000/titles/tt0112130", "rating": 9 }
+
+### My ratings (public)
+GET {{base}}/users/{{user}}/ratings
+
+### One rating
+GET {{base}}/users/{{user}}/ratings/tt0112130
+
+### Change it
+PUT {{base}}/users/{{user}}/ratings/tt0112130
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "rating": 8, "review": "Still great" }
+
+### Delete it (expect 204, also the second time)
+DELETE {{base}}/users/{{user}}/ratings/tt0112130
+Authorization: Bearer {{token}}
+
+### Bookmark a title
+POST {{base}}/users/{{user}}/title-bookmarks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "title": "http://localhost:3000/titles/tt0112130", "list": "watchlist" }
+
+### Move it to watched
+PUT {{base}}/users/{{user}}/title-bookmarks/tt0112130
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "list": "watched" }
+
+### Only watched titles
+GET {{base}}/users/{{user}}/title-bookmarks?list=watched
+Authorization: Bearer {{token}}
+
+### Bookmark a person
+POST {{base}}/users/{{user}}/person-bookmarks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "person": "http://localhost:3000/persons/nm0000206" }
+
+### Register (201 + Location)
+POST {{base}}/users
+Content-Type: application/json
+
+{ "username": "testuser88", "password": "password123" }
+
+### Register: duplicate (409)
+POST {{base}}/users
+Content-Type: application/json
+
+{ "username": "testuser88", "password": "password123" }
+
+### Register: short password (400)
+POST {{base}}/users
+Content-Type: application/json
+
+{ "username": "x", "password": "short" }
+
+### Login (201 + token)
+# @name login
+POST {{base}}/tokens
+Content-Type: application/json
+
+{ "username": "testuser88", "password": "password123" }
+
+###
+@token = {{login.response.body.token}}
+
+### Login: wrong password (401)
+POST {{base}}/tokens
+Content-Type: application/json
+
+{ "username": "testuser8", "password": "wrong" }
+
+### Get user (200)
+GET {{base}}/users/{{userId}}
+Authorization: Bearer {{token}}
+
+### Get user: no token (401)
+GET {{base}}/users/{{userId}}
+
+### Get user: someone else's id (403)
+GET {{base}}/users/6
+Authorization: Bearer {{token}}
+
+### Get user: bad id (400)
+GET {{base}}/users/abc
+
+### Rename (200)
+PATCH {{base}}/users/{{userId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "username": "testuser8b" }
+
+### Rename: taken (409)
+PATCH {{base}}/users/{{userId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "username": "testuser8" }
+
+### Change password (204)
+PUT {{base}}/users/{{userId}}/password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "currentPassword": "password123", "newPassword": "newpassword123" }
+
+### Change password: wrong current (401)
+PUT {{base}}/users/{{userId}}/password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "currentPassword": "nope", "newPassword": "newpassword123" }
+
+### Search history (200)
+GET {{base}}/users/{{userId}}/search-history?limit=5
+Authorization: Bearer {{token}}
+
+### Delete one entry: replace 1 with a real id (204, then 404)
+DELETE {{base}}/users/{{userId}}/search-history/1
+Authorization: Bearer {{token}}
+
+### Clear history (204)
+DELETE {{base}}/users/{{userId}}/search-history
+Authorization: Bearer {{token}}
+
+### Trending searches (200, public)
+GET {{base}}/trending-searches?limit=5
+
+### Recommendations from ratings (200)
+GET {{base}}/users/{{userId}}/recommendations?basis=ratings
+Authorization: Bearer {{token}}
+
+### Recommendations from bookmarks (200)
+GET {{base}}/users/{{userId}}/recommendations?basis=bookmarks
+Authorization: Bearer {{token}}
+
+### Recommendations: missing basis (400)
+GET {{base}}/users/{{userId}}/recommendations
+Authorization: Bearer {{token}}
+
+### Logout (204)
+DELETE {{base}}/tokens/current
+Authorization: Bearer {{token}}
+
+### Delete user (204). Run this last.
+DELETE {{base}}/users/{{userId}}
+Authorization: Bearer {{token}}
