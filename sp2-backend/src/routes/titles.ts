@@ -1,9 +1,7 @@
 import { Router } from 'express';
-
 import { findTitle, searchTitles, getTitleCast, getSimilarTitles, getTitleRatings, getTitleGenres } from '../data/titles.js';
 
 export const titles = Router();
-
 
 titles.get('/', async (req, res) => {
     const q = typeof req.query.q === 'string' ? req.query.q : '';

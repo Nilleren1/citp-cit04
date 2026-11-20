@@ -47,22 +47,16 @@ router.post('/users', async (req, res) => {
 
     const passwordHash = await hashPassword(password);
 
-    let userId: number;
+    const result = await userService.create(username.trim(), passwordHash);
 
-    try {
-        userId = await userService.create(username.trim(), passwordHash);
-    } catch (err: any) {
-        if (err.code === '23505') {
-            throw new ApiError(409, 'conflict', 'Username is already taken.');
-        }
-
-        throw err;
+    if (result === 'username-taken') {
+        throw new ApiError(409, 'conflict', 'Username is already taken.');
     }
 
-    const user = await userService.find(userId);
+    const user = await userService.find(result);
 
     res.status(201)
-        .location(`${BASE_URL}/users/${userId}`)
+        .location(`${BASE_URL}/users/${result}`)
         .json(user);
 });
 
@@ -114,26 +108,20 @@ router.patch('/users/:userId', ...owner, async (req, res) => {
         throw validationError('username', 'Username is required.');
     }
 
-    let user;
+    const result = await userService.updateUsername(
+        Number(req.params.userId),
+        username.trim(),
+    );
 
-    try {
-        user = await userService.updateUsername(
-            Number(req.params.userId),
-            username.trim(),
-        );
-    } catch (err: any) {
-        if (err.code === '23505') {
-            throw new ApiError(409, 'conflict', 'Username is already taken.');
-        }
-
-        throw err;
+    if (result === 'username-taken') {
+        throw new ApiError(409, 'conflict', 'Username is already taken.');
     }
 
-    if (!user) {
+    if (!result) {
         throw new ApiError(404, 'not_found', 'No such user.');
     }
 
-    res.json(toUserDto(user, BASE_URL));
+    res.json(toUserDto(result, BASE_URL));
 });
 
 // ---- Update password ----

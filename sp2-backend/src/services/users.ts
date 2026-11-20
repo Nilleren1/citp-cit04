@@ -5,9 +5,15 @@ import type { User, UserCredentials } from '../data/users.js';
 import * as recommendationsData from '../data/recommendations.js';
 import { pool } from '../db.js';
 import * as ratingsData from '../data/ratings.js';
+import { pgCode } from '../middleware/errors.js';
 
-export async function create(username: string, passwordHash: string): Promise<number> {
-  return usersData.create(username, passwordHash);
+export async function create(username: string, passwordHash: string): Promise<number | 'username-taken'> {
+    try {
+        return await usersData.create(username, passwordHash);
+    } catch (err) {
+        if (pgCode(err) === '23505') return 'username-taken';
+        throw err;
+    }
 }
 
 export async function find(userId: number): Promise<User | undefined> {
@@ -22,8 +28,13 @@ export async function findCredentials(userId: number): Promise<UserCredentials |
   return usersData.findCredentials(userId);
 }
 
-export async function updateUsername(userId: number, username: string): Promise<User | undefined> {
-  return usersData.updateUsername(userId, username);
+export async function updateUsername(userId: number, username: string): Promise<User | 'username-taken' | undefined> {
+    try {
+        return await usersData.updateUsername(userId, username);
+    } catch (err) {
+        if (pgCode(err) === '23505') return 'username-taken';
+        throw err;
+    }
 }
 
 export async function updatePassword(userId: number, passwordHash: string): Promise<boolean> {
