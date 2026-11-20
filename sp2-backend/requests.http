@@ -5,3 +5,62 @@
 # only the bodies.
 #
 @host = http://localhost:3000
+
+### ---- Titles ----
+
+### Browse all titles, most voted first
+GET {{host}}/titles?limit=5
+
+### Substring search in title or plot (string_search)
+GET {{host}}/titles?q=dark knight
+
+### Titles with all the words (exact_match_query)
+GET {{host}}/titles?q=batman joker&match=exact
+
+### Titles with most of the words, best first (best_match_query)
+GET {{host}}/titles?q=batman joker&match=best&limit=5&offset=5
+
+### Structured search (structured_string_search)
+GET {{host}}/titles?person=heath ledger&character=joker
+
+### One title, with genres and the first 10 cast members
+GET {{host}}/titles/tt0468569
+
+### Full cast, paged
+GET {{host}}/titles/tt0468569/cast?limit=5&offset=5
+
+### Similar titles (get_similar_titles, takes a few seconds)
+GET {{host}}/titles/tt0468569/similar-titles?limit=5
+
+### 404: no such title
+GET {{host}}/titles/tt0000000
+
+### 400: malformed id
+GET {{host}}/titles/abc
+
+### 400: match without q
+GET {{host}}/titles?match=best
+
+### 400: q and structured search together
+GET {{host}}/titles?q=batman&title=joker
+
+
+### ---- Persons ----
+
+### Browse all persons, best known first
+GET {{host}}/persons?limit=5
+
+### Name search (name_search)
+GET {{host}}/persons?q=keanu
+
+### Structured search (structured_name_search): played Joker in a "dark knight" title
+GET {{host}}/persons?title=dark knight&character=joker
+
+### One person, with professions and name rating
+GET {{host}}/persons/nm0000206
+
+### Co-players, most shared titles first
+GET {{host}}/persons/nm0000206/co-players
+
+### 404: no such person
+GET {{host}}/persons/nm0000000
