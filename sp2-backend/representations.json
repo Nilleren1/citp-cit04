@@ -123,23 +123,28 @@
         "next": null,
         "prev": null
     },
-    "KeywordPage": {
-        "url": "http://localhost:3000/persons/nm0000206/keywords?limit=10&offset=0",
+    "Keywords": {
+        "url": "http://localhost:3000/keywords?q=batman+joker&limit=20&offset=0",
         "items": [
             {
-                "word": "hacker",
-                "weight": 14,
-                "search": "http://localhost:3000/titles?q=hacker&match=best"
+                "word": "gotham",
+                "frequency": 41,
+                "search": "http://localhost:3000/titles?q=batman+joker+gotham&match=exact"
             },
             {
-                "word": "neo",
-                "weight": 9,
-                "search": "http://localhost:3000/titles?q=neo&match=best"
+                "word": "dark",
+                "frequency": 33,
+                "search": "http://localhost:3000/titles?q=batman+joker+dark&match=exact"
+            },
+            {
+                "word": "knight",
+                "frequency": 29,
+                "search": "http://localhost:3000/titles?q=batman+joker+knight&match=exact"
             }
         ],
-        "limit": 10,
+        "limit": 20,
         "offset": 0,
-        "next": null,
+        "next": "http://localhost:3000/keywords?q=batman+joker&limit=20&offset=20",
         "prev": null
     },
     "User": {
