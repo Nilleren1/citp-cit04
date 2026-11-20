@@ -1,6 +1,5 @@
 import { Router } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { hashPassword, verifyPassword, generateToken } from '../auth/crypto.js';
 import * as userService from '../services/users.js';
 import { buildPage } from './page.js';
 import { BASE_URL } from '../config.js';
@@ -46,7 +45,7 @@ router.post('/users', async (req, res) => {
         throw validationError('password', 'Password must contain at least 8 characters.');
     }
 
-    const passwordHash = await bcrypt.hash(password, 12);
+    const passwordHash = await hashPassword(password);
 
     let userId: number;
 
@@ -82,17 +81,10 @@ router.post('/tokens', async (req, res) => {
 
     const credentials = await userService.findCredentialsByUsername(username.trim());
 
-    if (!credentials || !(await bcrypt.compare(password, credentials.passwordHash))) {
+    if (!credentials || !(await verifyPassword(password, credentials.passwordHash))) {
         throw new ApiError(401, 'unauthorized', 'Invalid username or password.');
     }
-
-    const token = jwt.sign(
-        { sub: String(credentials.userId) },
-        JWT_SECRET,
-        { algorithm: 'HS256', expiresIn: '1h' },
-    );
-
-    res.status(201).json({ token });
+    res.status(201).json({ token: generateToken(credentials.userId) });
 });
 
 // ---- Logout ----
@@ -164,16 +156,13 @@ router.put('/users/:userId/password', ...owner, async (req, res) => {
         throw new ApiError(404, 'not_found', 'No such user.');
     }
 
-    const passwordMatches = await bcrypt.compare(
-        currentPassword,
-        credentials.passwordHash,
-    );
+    const passwordMatches = await verifyPassword(currentPassword, credentials.passwordHash);
 
     if (!passwordMatches) {
         throw new ApiError(401, 'unauthorized', 'Current password is incorrect.');
     }
 
-    const passwordHash = await bcrypt.hash(newPassword, 12);
+    const passwordHash = await hashPassword(newPassword);
     await userService.updatePassword(userId, passwordHash);
 
     res.status(204).send();
@@ -233,19 +222,19 @@ router.delete('/users/:userId/search-history/:historyId', ...owner, async (req, 
 // ---- Recommendations ----
 
 router.get('/users/:userId/recommendations', ...owner, oneOf('basis', ['bookmarks', 'ratings']), paging, async (req, res) => {
-        const basis = req.query.basis;
+    const basis = req.query.basis;
 
-        if (basis !== 'bookmarks' && basis !== 'ratings') {
-            throw validationError('basis', "Must be 'bookmarks' or 'ratings'.");
-        }
+    if (basis !== 'bookmarks' && basis !== 'ratings') {
+        throw validationError('basis', "Must be 'bookmarks' or 'ratings'.");
+    }
 
-        const userId = Number(req.params.userId);
-        const { limit, offset } = res.locals.paging;
+    const userId = Number(req.params.userId);
+    const { limit, offset } = res.locals.paging;
 
-        const rows = await userService.recommendations(userId, basis, limit + 1, offset);
+    const rows = await userService.recommendations(userId, basis, limit + 1, offset);
 
-        res.json(buildPage(req, rows, limit, offset, (t) => toTitleSummaryDto(t, BASE_URL)));
-    },
+    res.json(buildPage(req, rows, limit, offset, (t) => toTitleSummaryDto(t, BASE_URL)));
+},
 );
 
 // ---- Trending searches ----
