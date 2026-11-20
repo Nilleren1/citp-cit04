@@ -6,12 +6,16 @@ import { buildPage } from './page.js';
 import { BASE_URL } from '../config.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { requireOwnership } from '../middleware/authorize.js';
-import { checkParam, paging } from '../middleware/validate.js';
+import { checkParam, oneOf, paging } from '../middleware/validate.js';
 import { ApiError, validationError } from '../middleware/errors.js';
+import { toUserDto } from '../dto/users.js';
+import { toTitleSummaryDto } from '../dto/titles.js';
 
 const router = Router();
 
 const JWT_SECRET = process.env.JWT_SECRET;
+
+const owner = [authenticate, requireOwnership];
 
 if (!JWT_SECRET) {
     throw new Error('JWT_SECRET environment variable is missing');
@@ -91,24 +95,27 @@ router.post('/tokens', async (req, res) => {
     res.status(201).json({ token });
 });
 
-// All routes below require authentication and ownership.
-router.use('/users/:userId', authenticate, requireOwnership);
+// ---- Logout ----
+
+router.delete('/tokens/current', authenticate, (_req, res) => {
+    res.status(204).send();
+});
 
 // ---- Get user ----
 
-router.get('/users/:userId', async (req, res) => {
+router.get('/users/:userId', ...owner, async (req, res) => {
     const user = await userService.find(Number(req.params.userId));
 
     if (!user) {
         throw new ApiError(404, 'not_found', 'No such user.');
     }
 
-    res.json(user);
+    res.json(toUserDto(user, BASE_URL));
 });
 
-// ---- Update username ----
+// ---- Update user----
 
-router.put('/users/:userId/username', async (req, res) => {
+router.patch('/users/:userId', ...owner, async (req, res) => {
     const { username } = req.body ?? {};
 
     if (typeof username !== 'string' || !username.trim()) {
@@ -134,12 +141,12 @@ router.put('/users/:userId/username', async (req, res) => {
         throw new ApiError(404, 'not_found', 'No such user.');
     }
 
-    res.json(user);
+    res.json(toUserDto(user, BASE_URL));
 });
 
 // ---- Update password ----
 
-router.put('/users/:userId/password', async (req, res) => {
+router.put('/users/:userId/password', ...owner, async (req, res) => {
     const { currentPassword, newPassword } = req.body ?? {};
 
     if (typeof currentPassword !== 'string' || !currentPassword) {
@@ -174,7 +181,7 @@ router.put('/users/:userId/password', async (req, res) => {
 
 // ---- Delete user ----
 
-router.delete('/users/:userId', async (req, res) => {
+router.delete('/users/:userId', ...owner, async (req, res) => {
     const removed = await userService.remove(Number(req.params.userId));
 
     if (!removed) {
@@ -186,7 +193,7 @@ router.delete('/users/:userId', async (req, res) => {
 
 // ---- Search history ----
 
-router.get('/users/:userId/search-history', paging, async (req, res) => {
+router.get('/users/:userId/search-history', ...owner, paging, async (req, res) => {
     const userId = Number(req.params.userId);
     const { limit, offset } = res.locals.paging;
 
@@ -205,12 +212,12 @@ router.get('/users/:userId/search-history', paging, async (req, res) => {
     );
 });
 
-router.delete('/users/:userId/search-history', async (req, res) => {
+router.delete('/users/:userId/search-history', ...owner, async (req, res) => {
     await userService.clearSearchHistory(Number(req.params.userId));
     res.status(204).send();
 });
 
-router.delete('/users/:userId/search-history/:historyId', async (req, res) => {
+router.delete('/users/:userId/search-history/:historyId', ...owner, async (req, res) => {
     const removed = await userService.removeSearchHistory(
         Number(req.params.userId),
         Number(req.params.historyId),
@@ -222,6 +229,24 @@ router.delete('/users/:userId/search-history/:historyId', async (req, res) => {
 
     res.status(204).send();
 });
+
+// ---- Recommendations ----
+
+router.get('/users/:userId/recommendations', ...owner, oneOf('basis', ['bookmarks', 'ratings']), paging, async (req, res) => {
+        const basis = req.query.basis;
+
+        if (basis !== 'bookmarks' && basis !== 'ratings') {
+            throw validationError('basis', "Must be 'bookmarks' or 'ratings'.");
+        }
+
+        const userId = Number(req.params.userId);
+        const { limit, offset } = res.locals.paging;
+
+        const rows = await userService.recommendations(userId, basis, limit + 1, offset);
+
+        res.json(buildPage(req, rows, limit, offset, (t) => toTitleSummaryDto(t, BASE_URL)));
+    },
+);
 
 // ---- Trending searches ----
 

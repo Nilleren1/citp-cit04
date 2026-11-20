@@ -1,3 +1,4 @@
+import { PoolClient } from 'pg';
 import { pool } from '../db.js';
 
 /** A user as the API shows them. */
@@ -76,8 +77,8 @@ export async function updatePassword(userId: number, passwordHash: string): Prom
 }
 
 /** Deletes a user through delete_user(). */
-export async function remove(userId: number): Promise<boolean> {
-  const { rows } = await pool.query<{ removed: boolean }>(
+export async function remove(userId: number, db: Pick<PoolClient, 'query'> = pool) {
+  const { rows } = await db.query<{ removed: boolean }>(
     `SELECT delete_user($1) AS removed`,
     [userId],
   );
