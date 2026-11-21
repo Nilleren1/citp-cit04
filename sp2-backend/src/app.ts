@@ -10,6 +10,7 @@ import { persons } from './routes/persons.js';
 import ratings from './routes/ratings.js';
 import bookmarks from './routes/bookmarks.js';
 import users from './routes/users.js';
+import cors from 'cors';
 
 export const app = express();
 

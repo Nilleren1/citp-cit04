@@ -234,4 +234,21 @@ router.get('/trending-searches', paging, async (req, res) => {
     );
 });
 
+// ---- Keywords ----
+
+router.get('/keywords', paging, async (req, res) => {
+  const q = req.query.q;
+
+  if (typeof q !== 'string' || !q.trim()) {
+    throw validationError('q', 'Query is required.');
+  }
+
+  const words = q.trim().split(/\s+/);
+  const { limit, offset } = res.locals.paging;
+
+  const rows = await userService.searchKeywords(words, limit + 1, offset);
+
+  res.json(buildPage(req, rows, limit, offset, (k) => k));
+});
+
 export default router;
