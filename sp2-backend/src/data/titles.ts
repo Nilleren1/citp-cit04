@@ -157,3 +157,8 @@ export async function similar(tconst: string, limit: number, offset: number): Pr
   );
   return rows;
 }
+
+export async function exists(tconst: string): Promise<boolean> {
+  const { rowCount } = await pool.query(`SELECT 1 FROM title WHERE tconst = $1`, [tconst]);
+  return (rowCount ?? 0) > 0;
+}

@@ -5,6 +5,7 @@
 //
 // Then send requests with requests.http, or with a browser for the GETs.
 
+import 'dotenv/config';
 import { app } from './app.js';
 
 const port = Number(process.env.PORT ?? 3000);
