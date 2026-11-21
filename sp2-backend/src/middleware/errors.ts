@@ -36,6 +36,23 @@ const body = (status: number, error: string, message: string, details: ErrorDeta
   details,
 });
 
+/**
+ * A 405 for a path that exists but does not take this method, e.g. POST /titles.
+ * Register it with router.all after the path's real handlers. Allowing GET also allows HEAD.
+ * OPTIONS is always allowed: it asks which methods a path takes, so it gets the Allow header and a 204.
+ */
+export const methodNotAllowed =
+  (...allowed: string[]): RequestHandler =>
+  (req, res) => {
+    const methods = [...allowed, ...(allowed.includes('GET') ? ['HEAD'] : []), 'OPTIONS'];
+    res.set('Allow', methods.join(', '));
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(204);
+      return;
+    }
+    res.status(405).json(body(405, 'method_not_allowed', `${req.method} is not allowed here.`));
+  };
+
 /** The last route: a 404 for every request no router handled. */
 export const notFound: RequestHandler = (_req, res) => {
   res.status(404).json(body(404, 'not_found', 'No such resource.'));

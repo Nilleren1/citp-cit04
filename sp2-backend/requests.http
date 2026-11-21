@@ -35,14 +35,41 @@ GET {{host}}/titles/tt0468569/similar-titles?limit=5
 ### 404: no such title
 GET {{host}}/titles/tt0000000
 
+### 404: cast of a title that does not exist
+GET {{host}}/titles/tt0000000/cast
+
+### 404: similar titles of a title that does not exist
+GET {{host}}/titles/tt0000000/similar-titles
+
 ### 400: malformed id
 GET {{host}}/titles/abc
 
 ### 400: match without q
 GET {{host}}/titles?match=best
 
+### 400: match is not one of exact/best
+GET {{host}}/titles?q=batman&match=foo
+
 ### 400: q and structured search together
 GET {{host}}/titles?q=batman&title=joker
+
+### 400: the same parameter given twice
+GET {{host}}/titles?q=batman&q=joker
+
+### 400: limit must be a positive integer
+GET {{host}}/titles?limit=0
+
+### 400: offset must be a non-negative integer
+GET {{host}}/titles?offset=-1
+
+### 200: a limit above 100 falls back to the default, 20 (check "limit" in the body)
+GET {{host}}/titles?limit=500
+
+### 405: titles are read-only (see the Allow header)
+POST {{host}}/titles
+
+### 405: delete not allowed (see the Allow header)
+DELETE {{host}}/titles/tt0468569
 
 
 ### ---- Persons ----
@@ -64,3 +91,6 @@ GET {{host}}/persons/nm0000206/co-players
 
 ### 404: no such person
 GET {{host}}/persons/nm0000000
+
+### 405: persons are read-only (see the Allow header)
+DELETE {{host}}/persons/nm0000206

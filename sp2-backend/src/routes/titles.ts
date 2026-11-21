@@ -8,7 +8,7 @@ import { BASE_URL } from '../config.js';
 import { buildPage } from './page.js';
 import { queryFields, queryText } from './query.js';
 import { checkParam, oneOf, paging } from '../middleware/validate.js';
-import { ApiError, validationError } from '../middleware/errors.js';
+import { ApiError, methodNotAllowed, validationError } from '../middleware/errors.js';
 
 export const titles = Router();
 
@@ -87,3 +87,6 @@ titles.get('/:tconst/similar-titles', paging, async (req, res) => {
   const rows = await titleData.similar(tconst, limit + 1, offset);
   res.json(buildPage(req, rows, limit, offset, (t) => toTitleSummaryDto(t, BASE_URL)));
 });
+
+// Titles come from the IMDb data and are read-only, so any other method on these paths is a 405.
+titles.all(['/', '/:tconst', '/:tconst/cast', '/:tconst/similar-titles'], methodNotAllowed('GET'));

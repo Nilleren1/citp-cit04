@@ -7,7 +7,7 @@ import { BASE_URL } from '../config.js';
 import { buildPage } from './page.js';
 import { queryFields, queryText } from './query.js';
 import { checkParam, paging } from '../middleware/validate.js';
-import { ApiError, validationError } from '../middleware/errors.js';
+import { ApiError, methodNotAllowed, validationError } from '../middleware/errors.js';
 
 export const persons = Router();
 
@@ -67,3 +67,6 @@ persons.get('/:nconst/co-players', paging, async (req, res) => {
   const rows = await personData.coPlayers(nconst, limit + 1, offset);
   res.json(buildPage(req, rows, limit, offset, (c) => toCoPlayerDto(c, BASE_URL)));
 });
+
+// Persons come from the IMDb data and are read-only, so any other method on these paths is a 405.
+persons.all(['/', '/:nconst', '/:nconst/co-players'], methodNotAllowed('GET'));
