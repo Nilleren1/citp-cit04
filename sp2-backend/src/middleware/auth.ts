@@ -1,19 +1,9 @@
 // Authentication (who is asking, 401) and authorization (may they do this, 403).
 
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
 import { ApiError } from './errors.js';
-import * as userService from '../services/users.js';
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is missing');
-}
-
-interface JwtPayload {
-  sub: string;
-}
+import { verifyToken } from '../auth/crypto.js';
+import * as usersData from '../data/users.js';
 
 // ---- Authentication ----
 
@@ -28,22 +18,14 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
     return next(new ApiError(401, 'unauthorized', 'Authentication is required.'));
   }
 
-  const token = authorization.substring(7);
-  let userId: number;
+  const userId = verifyToken(authorization.substring(7));
 
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET!, { algorithms: ['HS256'] }) as JwtPayload;
-    userId = Number(decoded.sub);
-  } catch {
+  if (userId === undefined) {
     return next(new ApiError(401, 'unauthorized', 'Invalid or expired authentication token.'));
   }
 
-  if (!Number.isSafeInteger(userId) || userId <= 0) {
-    return next(new ApiError(401, 'unauthorized', 'Invalid authentication token.'));
-  }
-
   try {
-    if (!(await userService.find(userId))) {
+    if (!(await usersData.find(userId))) {
       return next(new ApiError(401, 'unauthorized', 'User account no longer exists.'));
     }
   } catch (err) {

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as bookmarksService from '../services/bookmarks.js';
+import * as bookmarksData from '../data/bookmarks.js';
 import type { BookmarkList } from '../data/bookmarks.js';
 import { toPersonBookmarkDto, toTitleBookmarkDto } from '../dto/bookmarks.js';
 import { buildPage } from '../helpers/page.js';
@@ -53,13 +54,13 @@ function readPersonBookmarkBody(body: unknown) {
 router.get('/users/:userId/title-bookmarks', oneOf('list', LISTS), paging, async (req, res) => {
   const { limit, offset } = res.locals.paging;
   const list = req.query.list as BookmarkList | undefined;
-  const rows = await bookmarksService.listTitleBookmarks(Number(req.params.userId), list, limit + 1, offset);
+  const rows = await bookmarksData.listTitleBookmarks(Number(req.params.userId), list, limit + 1, offset);
 
   res.json(buildPage(req, rows, limit, offset, (b) => toTitleBookmarkDto(b, BASE_URL)));
 });
 
 router.get('/users/:userId/title-bookmarks/:tconst', async (req, res) => {
-  const bookmark = await bookmarksService.findTitleBookmark(Number(req.params.userId), String(req.params.tconst));
+  const bookmark = await bookmarksData.findTitleBookmark(Number(req.params.userId), String(req.params.tconst));
   if (!bookmark) throw new ApiError(404, 'not_found', 'No such bookmark.');
 
   res.json(toTitleBookmarkDto(bookmark, BASE_URL));
@@ -73,7 +74,7 @@ router.post('/users/:userId/title-bookmarks', async (req, res) => {
   if (result === 'no-such-title') throw new ApiError(404, 'not_found', 'No such title.');
   if (result === 'already-exists') throw new ApiError(409, 'conflict', 'You have already bookmarked this title.');
 
-  const created = await bookmarksService.findTitleBookmark(userId, tconst);
+  const created = await bookmarksData.findTitleBookmark(userId, tconst);
   if (!created) throw new Error('A bookmark that was just created could not be read.');
 
   res
@@ -87,17 +88,18 @@ router.put('/users/:userId/title-bookmarks/:tconst', async (req, res) => {
   const tconst = String(req.params.tconst);
   const { list } = readTitleBookmarkBody(req.body, false);
 
-  const result = await bookmarksService.updateTitleBookmark(userId, tconst, list);
-  if (result === 'not-found') throw new ApiError(404, 'not_found', 'No such bookmark.');
+  if (!(await bookmarksData.updateTitleBookmark(userId, tconst, list))) {
+    throw new ApiError(404, 'not_found', 'No such bookmark.');
+  }
 
-  const updated = await bookmarksService.findTitleBookmark(userId, tconst);
+  const updated = await bookmarksData.findTitleBookmark(userId, tconst);
   if (!updated) throw new Error('A bookmark that was just updated could not be read.');
 
   res.json(toTitleBookmarkDto(updated, BASE_URL));
 });
 
 router.delete('/users/:userId/title-bookmarks/:tconst', async (req, res) => {
-  await bookmarksService.removeTitleBookmark(Number(req.params.userId), String(req.params.tconst));
+  await bookmarksData.removeTitleBookmark(Number(req.params.userId), String(req.params.tconst));
   res.status(204).send();
 });
 
@@ -105,13 +107,13 @@ router.delete('/users/:userId/title-bookmarks/:tconst', async (req, res) => {
 
 router.get('/users/:userId/person-bookmarks', paging, async (req, res) => {
   const { limit, offset } = res.locals.paging;
-  const rows = await bookmarksService.listPersonBookmarks(Number(req.params.userId), limit + 1, offset);
+  const rows = await bookmarksData.listPersonBookmarks(Number(req.params.userId), limit + 1, offset);
 
   res.json(buildPage(req, rows, limit, offset, (b) => toPersonBookmarkDto(b, BASE_URL)));
 });
 
 router.get('/users/:userId/person-bookmarks/:nconst', async (req, res) => {
-  const bookmark = await bookmarksService.findPersonBookmark(Number(req.params.userId), String(req.params.nconst));
+  const bookmark = await bookmarksData.findPersonBookmark(Number(req.params.userId), String(req.params.nconst));
   if (!bookmark) throw new ApiError(404, 'not_found', 'No such bookmark.');
 
   res.json(toPersonBookmarkDto(bookmark, BASE_URL));
@@ -125,7 +127,7 @@ router.post('/users/:userId/person-bookmarks', async (req, res) => {
   if (result === 'no-such-person') throw new ApiError(404, 'not_found', 'No such person.');
   if (result === 'already-exists') throw new ApiError(409, 'conflict', 'You have already bookmarked this person.');
 
-  const created = await bookmarksService.findPersonBookmark(userId, nconst);
+  const created = await bookmarksData.findPersonBookmark(userId, nconst);
   if (!created) throw new Error('A bookmark that was just created could not be read.');
 
   res
@@ -135,7 +137,7 @@ router.post('/users/:userId/person-bookmarks', async (req, res) => {
 });
 
 router.delete('/users/:userId/person-bookmarks/:nconst', async (req, res) => {
-  await bookmarksService.removePersonBookmark(Number(req.params.userId), String(req.params.nconst));
+  await bookmarksData.removePersonBookmark(Number(req.params.userId), String(req.params.nconst));
   res.status(204).send();
 });
 

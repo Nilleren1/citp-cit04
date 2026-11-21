@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import * as ratingsService from '../services/ratings.js';
+import * as ratingsData from '../data/ratings.js';
+import * as titlesData from '../data/titles.js';
+import * as usersData from '../data/users.js';
 import { toRatingDto } from '../dto/ratings.js';
 import { buildPage } from '../helpers/page.js';
 import { BASE_URL } from '../config.js';
@@ -44,14 +47,17 @@ function readRatingBody(body: unknown, withTitle: boolean) {
 
 router.get('/users/:userId/ratings', paging, async (req, res) => {
   const { limit, offset } = res.locals.paging;
-  const rows = await ratingsService.listByUser(Number(req.params.userId), limit + 1, offset);
-  if (!rows) throw new ApiError(404, 'not_found', 'No such user.');
+  const userId = Number(req.params.userId);
+  // A user who has rated nothing is an empty page; only an unknown user is a 404.
+  if (!(await usersData.find(userId))) throw new ApiError(404, 'not_found', 'No such user.');
+
+  const rows = await ratingsData.listByUser(userId, limit + 1, offset);
 
   res.json(buildPage(req, rows, limit, offset, (r) => toRatingDto(r, BASE_URL)));
 });
 
 router.get('/users/:userId/ratings/:tconst', async (req, res) => {
-  const rating = await ratingsService.find(Number(req.params.userId), String(req.params.tconst));
+  const rating = await ratingsData.find(Number(req.params.userId), String(req.params.tconst));
   if (!rating) throw new ApiError(404, 'not_found', 'No such rating.');
 
   res.json(toRatingDto(rating, BASE_URL));
@@ -59,8 +65,10 @@ router.get('/users/:userId/ratings/:tconst', async (req, res) => {
 
 router.get('/titles/:tconst/ratings', paging, async (req, res) => {
   const { limit, offset } = res.locals.paging;
-  const rows = await ratingsService.listByTitle(String(req.params.tconst), limit + 1, offset);
-  if (!rows) throw new ApiError(404, 'not_found', 'No such title.');
+  const tconst = String(req.params.tconst);
+  if (!(await titlesData.exists(tconst))) throw new ApiError(404, 'not_found', 'No such title.');
+
+  const rows = await ratingsData.listByTitle(tconst, limit + 1, offset);
 
   res.json(buildPage(req, rows, limit, offset, (r) => toRatingDto(r, BASE_URL)));
 });
@@ -73,7 +81,7 @@ router.post('/users/:userId/ratings', ...owner, async (req, res) => {
   if (result === 'no-such-title') throw new ApiError(404, 'not_found', 'No such title.');
   if (result === 'already-exists') throw new ApiError(409, 'conflict', 'You have already rated this title.');
 
-  const created = await ratingsService.find(userId, tconst);
+  const created = await ratingsData.find(userId, tconst);
   if (!created) throw new Error('A rating that was just created could not be read.');
 
   res
@@ -89,7 +97,7 @@ router.put('/users/:userId/ratings/:tconst', ...owner, async (req, res) => {
   const result = await ratingsService.update(userId, String(req.params.tconst), rating, review);
   if (result === 'not-found') throw new ApiError(404, 'not_found', 'No such rating.');
 
-  const updated = await ratingsService.find(userId, String(req.params.tconst));
+  const updated = await ratingsData.find(userId, String(req.params.tconst));
   if (!updated) throw new Error('A rating that was just updated could not be read.');
 
   res.json(toRatingDto(updated, BASE_URL));

@@ -1,8 +1,12 @@
-// /users: create an account and log in.
+// /users and /tokens: accounts, logging in, search history, recommendations and trending searches.
+// Operations with rules go through services/users.ts; plain reads call data/ directly.
 
 import { Router } from 'express';
-import { hashPassword, verifyPassword, generateToken } from '../auth/crypto.js';
+import { generateToken } from '../auth/crypto.js';
 import * as userService from '../services/users.js';
+import * as usersData from '../data/users.js';
+import * as searchHistoryData from '../data/search_history.js';
+import * as recommendationsData from '../data/recommendations.js';
 import { buildPage } from '../helpers/page.js';
 import { BASE_URL } from '../config.js';
 import { authenticate, requireOwnership } from '../middleware/auth.js';
@@ -40,15 +44,13 @@ router.post('/users', async (req, res) => {
         throw validationError('password', 'Password must contain at least 8 characters.');
     }
 
-    const passwordHash = await hashPassword(password);
-
-    const result = await userService.create(username.trim(), passwordHash);
+    const result = await userService.register(username.trim(), password);
 
     if (result === 'username-taken') {
         throw new ApiError(409, 'conflict', 'Username is already taken.');
     }
 
-    const user = await userService.find(result);
+    const user = await usersData.find(result);
     if (!user) throw new Error('A user that was just created could not be read.');
 
     res.status(201)
@@ -69,12 +71,12 @@ router.post('/tokens', async (req, res) => {
         throw validationError('password', 'Password is required.');
     }
 
-    const credentials = await userService.findCredentialsByUsername(username.trim());
+    const userId = await userService.login(username.trim(), password);
 
-    if (!credentials || !(await verifyPassword(password, credentials.passwordHash))) {
+    if (userId === undefined) {
         throw new ApiError(401, 'unauthorized', 'Invalid username or password.');
     }
-    res.status(201).json({ token: generateToken(credentials.userId) });
+    res.status(201).json({ token: generateToken(userId) });
 });
 
 // ---- Logout ----
@@ -86,7 +88,7 @@ router.delete('/tokens/current', authenticate, (_req, res) => {
 // ---- Get user ----
 
 router.get('/users/:userId', ...owner, async (req, res) => {
-    const user = await userService.find(Number(req.params.userId));
+    const user = await usersData.find(Number(req.params.userId));
 
     if (!user) {
         throw new ApiError(404, 'not_found', 'No such user.');
@@ -133,21 +135,15 @@ router.put('/users/:userId/password', ...owner, async (req, res) => {
         throw validationError('newPassword', 'New password must contain at least 8 characters.');
     }
 
-    const userId = Number(req.params.userId);
-    const credentials = await userService.findCredentials(userId);
+    const result = await userService.changePassword(Number(req.params.userId), currentPassword, newPassword);
 
-    if (!credentials) {
+    if (result === 'not-found') {
         throw new ApiError(404, 'not_found', 'No such user.');
     }
 
-    const passwordMatches = await verifyPassword(currentPassword, credentials.passwordHash);
-
-    if (!passwordMatches) {
+    if (result === 'wrong-password') {
         throw new ApiError(401, 'unauthorized', 'Current password is incorrect.');
     }
-
-    const passwordHash = await hashPassword(newPassword);
-    await userService.updatePassword(userId, passwordHash);
 
     res.status(204).send();
 });
@@ -170,7 +166,7 @@ router.get('/users/:userId/search-history', ...owner, paging, async (req, res) =
     const userId = Number(req.params.userId);
     const { limit, offset } = res.locals.paging;
 
-    const rows = await userService.listSearchHistory(
+    const rows = await searchHistoryData.list(
         userId,
         limit + 1,
         offset,
@@ -186,12 +182,12 @@ router.get('/users/:userId/search-history', ...owner, paging, async (req, res) =
 });
 
 router.delete('/users/:userId/search-history', ...owner, async (req, res) => {
-    await userService.clearSearchHistory(Number(req.params.userId));
+    await searchHistoryData.clear(Number(req.params.userId));
     res.status(204).send();
 });
 
 router.delete('/users/:userId/search-history/:historyId', ...owner, async (req, res) => {
-    const removed = await userService.removeSearchHistory(
+    const removed = await searchHistoryData.remove(
         Number(req.params.userId),
         Number(req.params.historyId),
     );
@@ -215,7 +211,9 @@ router.get('/users/:userId/recommendations', ...owner, oneOf('basis', ['bookmark
     const userId = Number(req.params.userId);
     const { limit, offset } = res.locals.paging;
 
-    const rows = await userService.recommendations(userId, basis, limit + 1, offset);
+    const rows = basis === 'bookmarks'
+        ? await recommendationsData.fromBookmarks(userId, limit + 1, offset)
+        : await recommendationsData.fromRatings(userId, limit + 1, offset);
 
     res.json(buildPage(req, rows, limit, offset, (t) => toTitleSummaryDto(t, BASE_URL)));
 },
@@ -226,7 +224,7 @@ router.get('/users/:userId/recommendations', ...owner, oneOf('basis', ['bookmark
 router.get('/trending-searches', paging, async (req, res) => {
     const { limit, offset } = res.locals.paging;
 
-    const rows = await userService.trendingSearches(limit + 1, offset);
+    const rows = await searchHistoryData.trending(limit + 1, offset);
 
     res.json(
         buildPage(req, rows, limit, offset, (entry) => ({
