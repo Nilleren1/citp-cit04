@@ -33,6 +33,15 @@ GET {{host}}/titles?q=batman joker&match=weighted&limit=5
 ### Structured search (structured_string_search)
 GET {{host}}/titles?person=heath ledger&character=joker
 
+### Top-rated movies (sort=rating only counts titles with at least 25,000 votes)
+GET {{host}}/titles?type=movie&sort=rating&limit=10
+
+### Filters: genre (any case), year, minimum rating
+GET {{host}}/titles?genre=western&year=2012&minRating=7
+
+### Filters: titles a person worked on (cast takes an nconst), highest rated first
+GET {{host}}/titles?cast=nm0000288&sort=rating
+
 ### One title, with genres and the first 10 cast members
 GET {{host}}/titles/tt0468569
 
@@ -68,6 +77,18 @@ GET {{host}}/titles/tt0468569/cast?sort=rating
 
 ### 400: q and structured search together
 GET {{host}}/titles?q=batman&title=joker
+
+### 400: filters cannot be combined with a search
+GET {{host}}/titles?q=batman&genre=action
+
+### 400: type is not one of the title types
+GET {{host}}/titles?type=film
+
+### 400: year must have four digits, minRating must be 1–10
+GET {{host}}/titles?year=08&minRating=11
+
+### 400: cast must be an nconst, not a name
+GET {{host}}/titles?cast=christian bale
 
 ### 400: the same parameter given twice
 GET {{host}}/titles?q=batman&q=joker

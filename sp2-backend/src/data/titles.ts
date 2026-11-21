@@ -1,5 +1,5 @@
-// Data access for titles: browsing, searching, one title, its cast (in billing order or by popularity)
-// and similar titles.
+// Data access for titles: browsing (with filters), searching, one title,
+// its cast (in billing order or by popularity) and similar titles.
 // The search functions are the ones from sp1-database/D_functions.sql.
 
 import { pool } from '../db.js';
@@ -44,6 +44,25 @@ export type TitleSearch =
   | { q: string; match: 'substring' | 'exact' | 'best' | 'weighted' }
   | { title?: string; plot?: string; character?: string; person?: string };
 
+/**
+ * Filters and sort order for the title list. Omitted filters are ignored; all given filters must match.
+ *   sort 'rating'  highest rated first, only titles with at least TOP_RATED_MIN_VOTES votes
+ */
+export interface TitleFilters {
+  type?: string;
+  genre?: string;
+  year?: number;
+  minRating?: number;
+  cast?: string;
+  sort?: 'rating';
+}
+
+/**
+ * Sorting by rating only counts titles with at least this many votes, so a 10.0 from 200 votes
+ * does not top the list. IMDb's Top 250 uses the same rule.
+ */
+const TOP_RATED_MIN_VOTES = 25000;
+
 // The SELECT list for a TitleSummary; the query must call the title table t.
 // tconst is character(10) in the database, so rtrim removes the padding.
 const SUMMARY_COLUMNS = `
@@ -81,14 +100,41 @@ export async function find(tconst: string): Promise<Title | undefined> {
   return rows[0];
 }
 
-/** All titles, most voted first. */
-export async function list(limit: number, offset: number): Promise<TitleSummary[]> {
+/** The titles that match the filters, most voted first, or highest rated first with sort 'rating'. */
+export async function list(f: TitleFilters, limit: number, offset: number): Promise<TitleSummary[]> {
+  const conditions: string[] = [];
+  const args: unknown[] = [];
+
+  // Adds the value as the next query parameter ($1, $2, ...) and the condition that uses it.
+  // Only these fixed conditions go into the SQL text; the values are always parameters.
+  const where = (value: unknown, condition: (param: string) => string) => {
+    args.push(value);
+    conditions.push(condition(`$${args.length}`));
+  };
+
+  if (f.type !== undefined) where(f.type, (p) => `t.titletype = ${p}`);
+  if (f.genre !== undefined) {
+    where(f.genre, (p) => `EXISTS (SELECT 1 FROM title_genre g
+                                   WHERE g.tconst = t.tconst AND lower(g.genre_name) = lower(${p}))`);
+  }
+  if (f.year !== undefined) where(f.year, (p) => `t.startyear = ${p}`);
+  if (f.minRating !== undefined) where(f.minRating, (p) => `t.averagerating >= ${p}`);
+  if (f.cast !== undefined) {
+    where(f.cast, (p) => `EXISTS (SELECT 1 FROM worked_on w WHERE w.tconst = t.tconst AND w.nconst = ${p})`);
+  }
+  if (f.sort === 'rating') where(TOP_RATED_MIN_VOTES, (p) => `t.numvotes >= ${p}`);
+
+  const order = f.sort === 'rating'
+    ? 't.averagerating DESC, t.numvotes DESC, t.tconst'
+    : 't.numvotes DESC NULLS LAST, t.tconst';
+
   const { rows } = await pool.query<TitleSummary>(
     `SELECT ${SUMMARY_COLUMNS}
      FROM title t
-     ORDER BY t.numvotes DESC NULLS LAST, t.tconst
-     LIMIT $1 OFFSET $2`,
-    [limit, offset],
+     ${conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''}
+     ORDER BY ${order}
+     LIMIT $${args.length + 1} OFFSET $${args.length + 2}`,
+    [...args, limit, offset],
   );
   return rows;
 }
