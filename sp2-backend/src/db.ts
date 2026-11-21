@@ -1,3 +1,6 @@
+// The PostgreSQL connection pool shared by all data access modules.
+// The connection settings come from the PG* variables in .env.
+
 import { Pool } from 'pg';
 
 export const pool = new Pool({

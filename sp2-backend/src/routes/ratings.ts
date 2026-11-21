@@ -7,6 +7,7 @@ import { authenticate } from '../middleware/authenticate.js';
 import { requireOwnership } from '../middleware/authorize.js';
 import { checkParam, paging } from '../middleware/validate.js';
 import { ApiError, ErrorDetail } from '../middleware/errors.js';
+import { tconstFromUrl } from './urls.js';
 
 const router = Router();
 
@@ -15,16 +16,14 @@ const owner = [authenticate, requireOwnership];
 router.param('userId', checkParam('userId'));
 router.param('tconst', checkParam('tconst'));
 
-const TITLE_URL = new RegExp(`^${BASE_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/titles/(tt\\d{7,9})$`);
-
 function readRatingBody(body: unknown, withTitle: boolean) {
   const b = (typeof body === 'object' && body !== null ? body : {}) as Record<string, unknown>;
   const details: ErrorDetail[] = [];
 
   let tconst = '';
   if (withTitle) {
-    const match = typeof b.title === 'string' ? TITLE_URL.exec(b.title) : null;
-    if (match) tconst = match[1];
+    const parsed = tconstFromUrl(b.title);
+    if (parsed) tconst = parsed;
     else details.push({ field: 'title', message: 'Must be the URL of a title.' });
   }
 

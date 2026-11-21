@@ -1,8 +1,7 @@
 import * as bookmarks from '../data/bookmarks.js';
 import type { BookmarkList } from '../data/bookmarks.js';
 import * as titles from '../data/titles.js';
-
-const pgCode = (err: unknown): string | undefined => (err as { code?: string }).code;
+import { pgCode } from '../middleware/errors.js';
 
 // ---- Title bookmarks ----
 

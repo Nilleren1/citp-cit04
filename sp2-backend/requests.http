@@ -5,3 +5,287 @@
 # only the bodies.
 #
 @host = http://localhost:3000
+
+### ---- Titles ----
+
+### Browse all titles, most voted first
+GET {{host}}/titles?limit=5
+
+### Substring search in title or plot (string_search)
+GET {{host}}/titles?q=dark knight
+
+### Titles with all the words (exact_match_query)
+GET {{host}}/titles?q=batman joker&match=exact
+
+### Titles with most of the words, best first (best_match_query)
+GET {{host}}/titles?q=batman joker&match=best&limit=5&offset=5
+
+### Structured search (structured_string_search)
+GET {{host}}/titles?person=heath ledger&character=joker
+
+### One title, with genres and the first 10 cast members
+GET {{host}}/titles/tt0468569
+
+### Full cast, paged
+GET {{host}}/titles/tt0468569/cast?limit=5&offset=5
+
+### Similar titles (get_similar_titles, takes a few seconds)
+GET {{host}}/titles/tt0468569/similar-titles?limit=5
+
+### 404: no such title
+GET {{host}}/titles/tt0000000
+
+### 404: cast of a title that does not exist
+GET {{host}}/titles/tt0000000/cast
+
+### 404: similar titles of a title that does not exist
+GET {{host}}/titles/tt0000000/similar-titles
+
+### 400: malformed id
+GET {{host}}/titles/abc
+
+### 400: match without q
+GET {{host}}/titles?match=best
+
+### 400: match is not one of exact/best
+GET {{host}}/titles?q=batman&match=foo
+
+### 400: q and structured search together
+GET {{host}}/titles?q=batman&title=joker
+
+### 400: the same parameter given twice
+GET {{host}}/titles?q=batman&q=joker
+
+### 400: limit must be a positive integer
+GET {{host}}/titles?limit=0
+
+### 400: offset must be a non-negative integer
+GET {{host}}/titles?offset=-1
+
+### 200: a limit above 100 falls back to the default, 20 (check "limit" in the body)
+GET {{host}}/titles?limit=500
+
+### 405: titles are read-only (see the Allow header)
+POST {{host}}/titles
+
+### 405: delete not allowed (see the Allow header)
+DELETE {{host}}/titles/tt0468569
+
+
+### ---- Persons ----
+
+### Browse all persons, best known first
+GET {{host}}/persons?limit=5
+
+### Name search (name_search)
+GET {{host}}/persons?q=keanu
+
+### Structured search (structured_name_search): played Joker in a "dark knight" title
+GET {{host}}/persons?title=dark knight&character=joker
+
+### One person, with professions and name rating
+GET {{host}}/persons/nm0000206
+
+### Co-players, most shared titles first
+GET {{host}}/persons/nm0000206/co-players
+
+### A person without a rating (none of their titles has votes): "rating" is null
+GET {{host}}/persons/nm0000042
+
+### 404: no such person
+GET {{host}}/persons/nm0000000
+
+### 404: co-players of a person who does not exist
+GET {{host}}/persons/nm0000000/co-players
+
+### 400: malformed id
+GET {{host}}/persons/abc
+
+### 400: q and structured search together
+GET {{host}}/persons?q=keanu&name=reeves
+
+### 400: the same parameter given twice
+GET {{host}}/persons?q=keanu&q=reeves
+
+### 405: persons are read-only (see the Allow header)
+POST {{host}}/persons
+
+### 405: persons are read-only (see the Allow header)
+DELETE {{host}}/persons/nm0000206
+@base = http://localhost:3000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTUwODk2ODcsImV4cCI6MTc5NTA5MzI4Nywic3ViIjoiNiJ9.VlsMgMij0oEJxs86cFns4jlqEyjRpdeOrWKKtOpXcyc
+@user = 6
+@userId = 81
+
+### Reviews of a title (public)
+GET {{base}}/titles/tt0816692/ratings
+
+### Paging
+GET {{base}}/titles/tt0816692/ratings?limit=2&offset=0
+
+### Create a rating
+POST {{base}}/users/{{user}}/ratings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "title": "http://localhost:3000/titles/tt0112130", "rating": 9, "review": "Great" }
+
+### Create again (expect 409)
+POST {{base}}/users/{{user}}/ratings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "title": "http://localhost:3000/titles/tt0112130", "rating": 9 }
+
+### My ratings (public)
+GET {{base}}/users/{{user}}/ratings
+
+### One rating
+GET {{base}}/users/{{user}}/ratings/tt0112130
+
+### Change it
+PUT {{base}}/users/{{user}}/ratings/tt0112130
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "rating": 8, "review": "Still great" }
+
+### Delete it (expect 204, also the second time)
+DELETE {{base}}/users/{{user}}/ratings/tt0112130
+Authorization: Bearer {{token}}
+
+### Bookmark a title
+POST {{base}}/users/{{user}}/title-bookmarks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "title": "http://localhost:3000/titles/tt0112130", "list": "watchlist" }
+
+### Move it to watched
+PUT {{base}}/users/{{user}}/title-bookmarks/tt0112130
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "list": "watched" }
+
+### Only watched titles
+GET {{base}}/users/{{user}}/title-bookmarks?list=watched
+Authorization: Bearer {{token}}
+
+### Bookmark a person
+POST {{base}}/users/{{user}}/person-bookmarks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "person": "http://localhost:3000/persons/nm0000206" }
+
+### Register (201 + Location)
+POST {{base}}/users
+Content-Type: application/json
+
+{ "username": "testuser88", "password": "password123" }
+
+### Register: duplicate (409)
+POST {{base}}/users
+Content-Type: application/json
+
+{ "username": "testuser88", "password": "password123" }
+
+### Register: short password (400)
+POST {{base}}/users
+Content-Type: application/json
+
+{ "username": "x", "password": "short" }
+
+### Login (201 + token)
+# @name login
+POST {{base}}/tokens
+Content-Type: application/json
+
+{ "username": "testuser88", "password": "password123" }
+
+###
+@token = {{login.response.body.token}}
+
+### Login: wrong password (401)
+POST {{base}}/tokens
+Content-Type: application/json
+
+{ "username": "testuser8", "password": "wrong" }
+
+### Get user (200)
+GET {{base}}/users/{{userId}}
+Authorization: Bearer {{token}}
+
+### Get user: no token (401)
+GET {{base}}/users/{{userId}}
+
+### Get user: someone else's id (403)
+GET {{base}}/users/6
+Authorization: Bearer {{token}}
+
+### Get user: bad id (400)
+GET {{base}}/users/abc
+
+### Rename (200)
+PATCH {{base}}/users/{{userId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "username": "testuser8b" }
+
+### Rename: taken (409)
+PATCH {{base}}/users/{{userId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "username": "testuser8" }
+
+### Change password (204)
+PUT {{base}}/users/{{userId}}/password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "currentPassword": "password123", "newPassword": "newpassword123" }
+
+### Change password: wrong current (401)
+PUT {{base}}/users/{{userId}}/password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "currentPassword": "nope", "newPassword": "newpassword123" }
+
+### Search history (200)
+GET {{base}}/users/{{userId}}/search-history?limit=5
+Authorization: Bearer {{token}}
+
+### Delete one entry: replace 1 with a real id (204, then 404)
+DELETE {{base}}/users/{{userId}}/search-history/1
+Authorization: Bearer {{token}}
+
+### Clear history (204)
+DELETE {{base}}/users/{{userId}}/search-history
+Authorization: Bearer {{token}}
+
+### Trending searches (200, public)
+GET {{base}}/trending-searches?limit=5
+
+### Recommendations from ratings (200)
+GET {{base}}/users/{{userId}}/recommendations?basis=ratings
+Authorization: Bearer {{token}}
+
+### Recommendations from bookmarks (200)
+GET {{base}}/users/{{userId}}/recommendations?basis=bookmarks
+Authorization: Bearer {{token}}
+
+### Recommendations: missing basis (400)
+GET {{base}}/users/{{userId}}/recommendations
+Authorization: Bearer {{token}}
+
+### Logout (204)
+DELETE {{base}}/tokens/current
+Authorization: Bearer {{token}}
+
+### Delete user (204). Run this last.
+DELETE {{base}}/users/{{userId}}
+Authorization: Bearer {{token}}

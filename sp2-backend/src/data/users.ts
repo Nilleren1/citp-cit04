@@ -1,3 +1,4 @@
+import { PoolClient } from 'pg';
 import { pool } from '../db.js';
 
 /** A user as the API shows them. */
@@ -45,7 +46,6 @@ export async function findCredentialsByUsername(username: string): Promise<UserC
   return rows[0];
 }
 
-/** For checking the current password before changing it. */
 export async function findCredentials(userId: number): Promise<UserCredentials | undefined> {
   const { rows } = await pool.query<UserCredentials>(
     `SELECT user_id AS "userId", username, password AS "passwordHash"
@@ -77,8 +77,8 @@ export async function updatePassword(userId: number, passwordHash: string): Prom
 }
 
 /** Deletes a user through delete_user(). */
-export async function remove(userId: number): Promise<boolean> {
-  const { rows } = await pool.query<{ removed: boolean }>(
+export async function remove(userId: number, db: Pick<PoolClient, 'query'> = pool) {
+  const { rows } = await db.query<{ removed: boolean }>(
     `SELECT delete_user($1) AS removed`,
     [userId],
   );

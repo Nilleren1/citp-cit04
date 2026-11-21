@@ -72,10 +72,22 @@ export async function rate(
 }
 
 /** Deletes a rating through delete_rating(). True when there was one to delete. */
-export async function remove(userId: number, tconst: string): Promise<boolean> {
-  const { rows } = await pool.query<{ removed: boolean }>(
+export async function remove(
+  userId: number,
+  tconst: string,
+  db: Pick<PoolClient, 'query'> = pool,
+): Promise<boolean> {
+  const { rows } = await db.query<{ removed: boolean }>(
     `SELECT delete_rating($1::integer, $2::character(10)) AS removed`,
     [userId, tconst],
   );
   return rows[0].removed;
+}
+
+export async function listTconstsByUser(userId: number, db: Pick<PoolClient, 'query'> = pool): Promise<string[]> {
+  const { rows } = await db.query(
+    `SELECT trim(tconst) AS tconst FROM rating WHERE user_id = $1`,
+    [userId],
+  );
+  return rows.map((r) => r.tconst);
 }
