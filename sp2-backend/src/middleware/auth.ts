@@ -1,3 +1,5 @@
+// Authentication (who is asking, 401) and authorization (may they do this, 403).
+
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { ApiError } from './errors.js';
@@ -12,6 +14,8 @@ if (!JWT_SECRET) {
 interface JwtPayload {
   sub: string;
 }
+
+// ---- Authentication ----
 
 /**
  * Requires a valid "Authorization: Bearer <token>" header and sets req.user.
@@ -47,5 +51,18 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
   }
 
   req.user = { id: userId };
+  next();
+}
+
+// ---- Authorization ----
+
+/**
+ * Requires the logged-in user to be the user in the path (:userId). Use after authenticate.
+ * Only the token and the path are compared, no data is needed, so this can be middleware.
+ */
+export function requireOwnership(req: Request, _res: Response, next: NextFunction) {
+  if (req.user?.id !== Number(req.params.userId)) {
+    return next(new ApiError(403, 'forbidden', 'You do not have permission to access this resource.'));
+  }
   next();
 }
