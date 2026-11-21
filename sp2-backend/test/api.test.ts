@@ -101,3 +101,19 @@ describe('unauthorised requests', () => {
     expect(res.status).toBe(403);
   });
 });
+
+it('IMDB data is read-only', async () => {
+  const res = await request(app).post('/titles').send({});
+  expect([404, 405]).toContain(res.status);
+});
+
+it('applies the default and maximum page size', async () => {
+  expect((await request(app).get('/titles')).body.limit).toBe(20);
+  expect((await request(app).get('/titles?limit=100')).body.limit).toBe(100);
+  expect((await request(app).get('/titles?limit=500')).body.limit).toBe(20);
+});
+
+it('errors do not leak internals', async () => {
+  const res = await request(app).get('/titles/tt9999999');
+  expect(JSON.stringify(res.body)).not.toMatch(/select |from |\.ts:|stack/i);
+});
