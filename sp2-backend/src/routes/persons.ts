@@ -4,8 +4,8 @@ import { Router, type Request } from 'express';
 import * as personData from '../data/persons.js';
 import { toCoPlayerDto, toPersonDto, toPersonSummaryDto } from '../dto/persons.js';
 import { BASE_URL } from '../config.js';
-import { buildPage } from './page.js';
-import { queryFields, queryText } from './query.js';
+import { buildPage } from '../helpers/page.js';
+import { queryFields, queryText } from '../helpers/query.js';
 import { checkParam, paging } from '../middleware/validate.js';
 import { ApiError, methodNotAllowed, validationError } from '../middleware/errors.js';
 

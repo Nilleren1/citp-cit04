@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import * as ratingsService from '../services/ratings.js';
 import { toRatingDto } from '../dto/ratings.js';
-import { buildPage } from './page.js';
+import { buildPage } from '../helpers/page.js';
 import { BASE_URL } from '../config.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { requireOwnership } from '../middleware/authorize.js';
 import { checkParam, paging } from '../middleware/validate.js';
 import { ApiError, ErrorDetail } from '../middleware/errors.js';
-import { tconstFromUrl } from './urls.js';
+import { tconstFromUrl } from '../helpers/urls.js';
 
 const router = Router();
 

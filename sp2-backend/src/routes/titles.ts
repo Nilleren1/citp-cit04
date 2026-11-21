@@ -5,8 +5,8 @@ import { Router, type Request } from 'express';
 import * as titleData from '../data/titles.js';
 import { toCastMemberDto, toTitleDto, toTitleSummaryDto } from '../dto/titles.js';
 import { BASE_URL } from '../config.js';
-import { buildPage } from './page.js';
-import { queryFields, queryText } from './query.js';
+import { buildPage } from '../helpers/page.js';
+import { queryFields, queryText } from '../helpers/query.js';
 import { checkParam, oneOf, paging } from '../middleware/validate.js';
 import { ApiError, methodNotAllowed, validationError } from '../middleware/errors.js';
 

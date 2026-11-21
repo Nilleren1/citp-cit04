@@ -3,7 +3,7 @@
 import { Router } from 'express';
 import { hashPassword, verifyPassword, generateToken } from '../auth/crypto.js';
 import * as userService from '../services/users.js';
-import { buildPage } from './page.js';
+import { buildPage } from '../helpers/page.js';
 import { BASE_URL } from '../config.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { requireOwnership } from '../middleware/authorize.js';
@@ -14,13 +14,7 @@ import { toTitleSummaryDto } from '../dto/titles.js';
 
 const router = Router();
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
 const owner = [authenticate, requireOwnership];
-
-if (!JWT_SECRET) {
-    throw new Error('JWT_SECRET environment variable is missing');
-}
 
 router.param('userId', checkParam('userId'));
 
