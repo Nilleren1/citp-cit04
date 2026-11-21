@@ -3,7 +3,7 @@ import { toRatingDto } from '../src/dto/ratings.js';
 
 const row = {
   userId: 6,
-  username: 'chris',
+  username: 'testuser',
   tconst: 'tt0111161',
   title: 'The Shawshank Redemption',
   rating: 9,
