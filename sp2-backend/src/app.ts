@@ -8,8 +8,17 @@ import { persons } from './routes/persons.js';
 import ratings from './routes/ratings.js';
 import bookmarks from './routes/bookmarks.js';
 import users from './routes/users.js';
+import cors from 'cors';
 
 export const app = express();
+
+app.use(cors({
+  origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Location'],
+  maxAge: 600,
+}));
 
 app.use(express.json());
 

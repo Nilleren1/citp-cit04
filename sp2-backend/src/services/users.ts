@@ -6,6 +6,7 @@ import * as recommendationsData from '../data/recommendations.js';
 import { pool } from '../db.js';
 import * as ratingsData from '../data/ratings.js';
 import { pgCode } from '../middleware/errors.js';
+import * as keywordsData from '../data/keywords.js';
 
 export async function create(username: string, passwordHash: string): Promise<number | 'username-taken'> {
     try {
@@ -84,3 +85,6 @@ export async function recommendations(userId: number, basis: 'bookmarks' | 'rati
     ? recommendationsData.fromBookmarks(userId, limit, offset)
     : recommendationsData.fromRatings(userId, limit, offset);
 }
+
+export const searchKeywords = (words: string[], limit: number, offset: number) =>
+  keywordsData.search(words, limit, offset);

@@ -113,7 +113,7 @@ POST {{host}}/persons
 ### 405: persons are read-only (see the Allow header)
 DELETE {{host}}/persons/nm0000206
 @base = http://localhost:3000
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTUwODk2ODcsImV4cCI6MTc5NTA5MzI4Nywic3ViIjoiNiJ9.VlsMgMij0oEJxs86cFns4jlqEyjRpdeOrWKKtOpXcyc
+@tokenRating = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTUyNTcxMDMsImV4cCI6MTc5NTI2MDcwMywic3ViIjoiNiJ9.yd4LLZtlx5r6kekPMqwdKZqqXzQBpwwR6ETLUWdy4MU
 @user = 6
 @userId = 81
 
@@ -125,14 +125,14 @@ GET {{base}}/titles/tt0816692/ratings?limit=2&offset=0
 
 ### Create a rating
 POST {{base}}/users/{{user}}/ratings
-Authorization: Bearer {{token}}
+Authorization: Bearer {{tokenRating}}
 Content-Type: application/json
 
 { "title": "http://localhost:3000/titles/tt0112130", "rating": 9, "review": "Great" }
 
 ### Create again (expect 409)
 POST {{base}}/users/{{user}}/ratings
-Authorization: Bearer {{token}}
+Authorization: Bearer {{tokenRating}}
 Content-Type: application/json
 
 { "title": "http://localhost:3000/titles/tt0112130", "rating": 9 }
@@ -145,36 +145,36 @@ GET {{base}}/users/{{user}}/ratings/tt0112130
 
 ### Change it
 PUT {{base}}/users/{{user}}/ratings/tt0112130
-Authorization: Bearer {{token}}
+Authorization: Bearer {{tokenRating}}
 Content-Type: application/json
 
 { "rating": 8, "review": "Still great" }
 
 ### Delete it (expect 204, also the second time)
 DELETE {{base}}/users/{{user}}/ratings/tt0112130
-Authorization: Bearer {{token}}
+Authorization: Bearer {{tokenRating}}
 
 ### Bookmark a title
 POST {{base}}/users/{{user}}/title-bookmarks
-Authorization: Bearer {{token}}
+Authorization: Bearer {{{{tokenRating}}}}
 Content-Type: application/json
 
 { "title": "http://localhost:3000/titles/tt0112130", "list": "watchlist" }
 
 ### Move it to watched
 PUT {{base}}/users/{{user}}/title-bookmarks/tt0112130
-Authorization: Bearer {{token}}
+Authorization: Bearer {{tokenRating}}
 Content-Type: application/json
 
 { "list": "watched" }
 
 ### Only watched titles
 GET {{base}}/users/{{user}}/title-bookmarks?list=watched
-Authorization: Bearer {{token}}
+Authorization: Bearer {{tokenRating}}
 
 ### Bookmark a person
 POST {{base}}/users/{{user}}/person-bookmarks
-Authorization: Bearer {{token}}
+Authorization: Bearer {{tokenRating}}
 Content-Type: application/json
 
 { "person": "http://localhost:3000/persons/nm0000206" }
@@ -289,3 +289,30 @@ Authorization: Bearer {{token}}
 ### Delete user (204). Run this last.
 DELETE {{base}}/users/{{userId}}
 Authorization: Bearer {{token}}
+
+### Keywords (200)
+GET {{base}}/keywords?q=batman+joker
+
+### Keywords: single word, with limit (200)
+GET {{base}}/keywords?q=batman&limit=5
+
+### Keywords: second page (200, check prev/next)
+GET {{base}}/keywords?q=batman&limit=5&offset=5
+
+### Keywords: no match (200, empty items)
+GET {{base}}/keywords?q=zzzzqqqq
+
+### Keywords: missing q (400)
+GET {{base}}/keywords
+
+### Keywords: empty q (400)
+GET {{base}}/keywords?q=
+
+### Keywords: bad limit (400)
+GET {{base}}/keywords?q=batman&limit=abc
+
+### Preflight (expect 204 with Access-Control-Allow-* headers)
+OPTIONS {{base}}/users/6/ratings
+Origin: http://localhost:5173
+Access-Control-Request-Method: POST
+Access-Control-Request-Headers: authorization,content-type
