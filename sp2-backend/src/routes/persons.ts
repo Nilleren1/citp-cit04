@@ -1,13 +1,13 @@
-// /persons: browse, search, one person and their co-players.
+// /persons: browse, search, one person, their co-players and the words of their titles.
 
 import { Router, type Request } from 'express';
 import * as personData from '../data/persons.js';
-import { toCoPlayerDto, toPersonDto, toPersonSummaryDto } from '../dto/persons.js';
+import { toCoPlayerDto, toPersonDto, toPersonSummaryDto, toPersonWordDto } from '../dto/persons.js';
 import { BASE_URL } from '../config.js';
 import { buildPage } from '../helpers/page.js';
 import { queryFields, queryText } from '../helpers/query.js';
 import { optionalAuthenticate } from '../middleware/auth.js';
-import { checkParam, paging } from '../middleware/validation.js';
+import { checkParam, oneOf, paging } from '../middleware/validation.js';
 import { ApiError, methodNotAllowed, validationError } from '../middleware/errors.js';
 
 export const persons = Router();
@@ -60,14 +60,27 @@ persons.get('/:nconst', async (req, res) => {
   res.json(toPersonDto(person, BASE_URL));
 });
 
-persons.get('/:nconst/co-players', paging, async (req, res) => {
+// ?sort=frequency (the default): most shared titles first (D6). ?sort=popularity: most popular first (D8).
+persons.get('/:nconst/co-players', oneOf('sort', ['frequency', 'popularity']), paging, async (req, res) => {
   const nconst = String(req.params.nconst);
   const { limit, offset } = res.locals.paging;
   if (!(await personData.exists(nconst))) throw notFound(nconst);
 
-  const rows = await personData.coPlayers(nconst, limit + 1, offset);
+  const rows = req.query.sort === 'popularity'
+    ? await personData.popularCoPlayers(nconst, limit + 1, offset)
+    : await personData.coPlayers(nconst, limit + 1, offset);
   res.json(buildPage(req, rows, limit, offset, (c) => toCoPlayerDto(c, BASE_URL)));
 });
 
+// The words that occur most often in the person's titles (D10).
+persons.get('/:nconst/words', paging, async (req, res) => {
+  const nconst = String(req.params.nconst);
+  const { limit, offset } = res.locals.paging;
+  if (!(await personData.exists(nconst))) throw notFound(nconst);
+
+  const rows = await personData.words(nconst, limit + 1, offset);
+  res.json(buildPage(req, rows, limit, offset, toPersonWordDto));
+});
+
 // Persons come from the IMDb data and are read-only, so any other method on these paths is a 405.
-persons.all(['/', '/:nconst', '/:nconst/co-players'], methodNotAllowed('GET'));
+persons.all(['/', '/:nconst', '/:nconst/co-players', '/:nconst/words'], methodNotAllowed('GET'));

@@ -54,10 +54,11 @@ export interface TitleDto {
 
 // worked_on.characters holds one character per credit, written like a list: "['Bruce Wayne']".
 // Names can contain apostrophes ("['Sheriff's Deputy']"), so it is not valid JSON.
+// get_popular_actors (D8) joins an actor's credits with ", ": "['Bruce Wayne'], ['Batman']".
 function parseCharacters(raw: string | null): string[] {
   if (raw === null || raw === '') return [];
   const inner = raw.startsWith("['") && raw.endsWith("']") ? raw.slice(2, -2) : raw;
-  return inner.split("', '").filter((name) => name !== '');
+  return inner.split(/', '|'\], \['/).filter((name) => name !== '');
 }
 
 export function toCastMemberDto(c: CastMember, base: string): CastMemberDto {

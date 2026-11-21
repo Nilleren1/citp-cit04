@@ -1,6 +1,6 @@
 // The JSON shapes of persons, and the functions that build them from the database rows.
 
-import { PersonSummary, Person, CoPlayer } from '../data/persons.js';
+import { PersonSummary, Person, CoPlayer, PersonWord } from '../data/persons.js';
 import { personUrl } from './shared.js';
 
 /** A person in a list (an item in GET /persons). */
@@ -33,6 +33,12 @@ export interface CoPlayerDto {
   url: string;
   name: string;
   titleCount: number;
+}
+
+/** An item in GET /persons/:nconst/words. A word is not a resource, so it has no url. */
+export interface PersonWordDto {
+  word: string;
+  frequency: number;
 }
 
 export function toPersonSummaryDto(p: PersonSummary, base: string): PersonSummaryDto {
@@ -68,5 +74,12 @@ export function toCoPlayerDto(c: CoPlayer, base: string): CoPlayerDto {
     url: personUrl(base, c.nconst),
     name: c.name,
     titleCount: c.titleCount,
+  };
+}
+
+export function toPersonWordDto(w: PersonWord): PersonWordDto {
+  return {
+    word: w.word,
+    frequency: w.frequency,
   };
 }

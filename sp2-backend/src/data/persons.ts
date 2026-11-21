@@ -1,4 +1,5 @@
-// Data access for persons: browsing, searching, one person and their co-players.
+// Data access for persons: browsing, searching, one person, their co-players
+// (most shared titles or most popular first) and the words of their titles.
 // The search functions are the ones from sp1-database/D_functions.sql.
 
 import { pool } from '../db.js';
@@ -25,6 +26,12 @@ export interface CoPlayer {
   nconst: string;
   name: string;
   titleCount: number;
+}
+
+/** A word from the titles a person worked on, and in how many of those titles it occurs. */
+export interface PersonWord {
+  word: string;
+  frequency: number;
 }
 
 /**
@@ -132,6 +139,38 @@ export async function coPlayers(nconst: string, limit: number, offset: number): 
        AND other.nconst <> me.nconst
      GROUP BY other.nconst, p.primaryname
      ORDER BY "titleCount" DESC, p.primaryname, other.nconst
+     LIMIT $2 OFFSET $3`,
+    [nconst, limit, offset],
+  );
+  return rows;
+}
+
+/** The actor's co-players, most popular (highest person rating) first, through get_popular_costars (D8). */
+export async function popularCoPlayers(nconst: string, limit: number, offset: number): Promise<CoPlayer[]> {
+  const { rows } = await pool.query<CoPlayer>(
+    `SELECT s.nconst,
+            s.primaryname AS name,
+            s.shared_titles AS "titleCount"
+     FROM get_popular_costars($1)
+          WITH ORDINALITY AS s(nconst, primaryname, shared_titles, rating, numvotes, num_titles, n)
+     ORDER BY s.n
+     LIMIT $2 OFFSET $3`,
+    [nconst, limit, offset],
+  );
+  return rows;
+}
+
+/**
+ * The words that occur most often in the titles the person worked on.
+ * Same logic as person_words (D10), but by nconst, because names are not unique.
+ */
+export async function words(nconst: string, limit: number, offset: number): Promise<PersonWord[]> {
+  const { rows } = await pool.query<PersonWord>(
+    `SELECT tw.word, count(DISTINCT tw.tconst)::integer AS frequency
+     FROM title_word tw
+     WHERE tw.tconst IN (SELECT w.tconst FROM worked_on w WHERE w.nconst = $1)
+     GROUP BY tw.word
+     ORDER BY frequency DESC, tw.word
      LIMIT $2 OFFSET $3`,
     [nconst, limit, offset],
   );

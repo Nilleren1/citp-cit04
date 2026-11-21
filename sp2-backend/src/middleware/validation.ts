@@ -10,8 +10,8 @@ export const MAX_LIMIT = 100;
 /** The largest PostgreSQL integer; larger ids and offsets would make the query fail. */
 const MAX_INT = 2147483647;
 
-/** The accepted formats for ids in the path (IMDb ids are tt/nm followed by 7–9 digits). */
-const patterns = {
+/** The accepted formats for ids (IMDb ids are tt/nm followed by 7–9 digits). */
+export const patterns = {
   userId: /^[1-9]\d*$/,
   tconst: /^tt\d{7,9}$/,
   nconst: /^nm\d{7,9}$/,
