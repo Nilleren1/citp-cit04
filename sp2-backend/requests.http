@@ -89,8 +89,26 @@ GET {{host}}/persons/nm0000206
 ### Co-players, most shared titles first
 GET {{host}}/persons/nm0000206/co-players
 
+### A person without a rating (none of their titles has votes): "rating" is null
+GET {{host}}/persons/nm0000042
+
 ### 404: no such person
 GET {{host}}/persons/nm0000000
+
+### 404: co-players of a person who does not exist
+GET {{host}}/persons/nm0000000/co-players
+
+### 400: malformed id
+GET {{host}}/persons/abc
+
+### 400: q and structured search together
+GET {{host}}/persons?q=keanu&name=reeves
+
+### 400: the same parameter given twice
+GET {{host}}/persons?q=keanu&q=reeves
+
+### 405: persons are read-only (see the Allow header)
+POST {{host}}/persons
 
 ### 405: persons are read-only (see the Allow header)
 DELETE {{host}}/persons/nm0000206
