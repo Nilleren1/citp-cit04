@@ -45,6 +45,13 @@ export async function findCredentialsByUsername(username: string): Promise<UserC
   return rows[0];
 }
 
+/** The user with the given username, including the password hash, or undefined if there is none. */
+export async function findUserByUsername(username: string) 
+{
+const result = await pool.query<{
+user_id: number;
+username: string;
+password: string;
 /** For checking the current password before changing it. */
 export async function findCredentials(userId: number): Promise<UserCredentials | undefined> {
   const { rows } = await pool.query<UserCredentials>(

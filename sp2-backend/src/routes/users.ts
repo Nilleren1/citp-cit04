@@ -1,3 +1,5 @@
+// /users: create an account and log in.
+
 import { Router } from 'express';
 import { hashPassword, verifyPassword, generateToken } from '../auth/crypto.js';
 import * as userService from '../services/users.js';

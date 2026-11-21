@@ -4,6 +4,114 @@
 # click "Send Request" above any request below. Check the status codes, not
 # only the bodies.
 #
+@host = http://localhost:3000
+
+### ---- Titles ----
+
+### Browse all titles, most voted first
+GET {{host}}/titles?limit=5
+
+### Substring search in title or plot (string_search)
+GET {{host}}/titles?q=dark knight
+
+### Titles with all the words (exact_match_query)
+GET {{host}}/titles?q=batman joker&match=exact
+
+### Titles with most of the words, best first (best_match_query)
+GET {{host}}/titles?q=batman joker&match=best&limit=5&offset=5
+
+### Structured search (structured_string_search)
+GET {{host}}/titles?person=heath ledger&character=joker
+
+### One title, with genres and the first 10 cast members
+GET {{host}}/titles/tt0468569
+
+### Full cast, paged
+GET {{host}}/titles/tt0468569/cast?limit=5&offset=5
+
+### Similar titles (get_similar_titles, takes a few seconds)
+GET {{host}}/titles/tt0468569/similar-titles?limit=5
+
+### 404: no such title
+GET {{host}}/titles/tt0000000
+
+### 404: cast of a title that does not exist
+GET {{host}}/titles/tt0000000/cast
+
+### 404: similar titles of a title that does not exist
+GET {{host}}/titles/tt0000000/similar-titles
+
+### 400: malformed id
+GET {{host}}/titles/abc
+
+### 400: match without q
+GET {{host}}/titles?match=best
+
+### 400: match is not one of exact/best
+GET {{host}}/titles?q=batman&match=foo
+
+### 400: q and structured search together
+GET {{host}}/titles?q=batman&title=joker
+
+### 400: the same parameter given twice
+GET {{host}}/titles?q=batman&q=joker
+
+### 400: limit must be a positive integer
+GET {{host}}/titles?limit=0
+
+### 400: offset must be a non-negative integer
+GET {{host}}/titles?offset=-1
+
+### 200: a limit above 100 falls back to the default, 20 (check "limit" in the body)
+GET {{host}}/titles?limit=500
+
+### 405: titles are read-only (see the Allow header)
+POST {{host}}/titles
+
+### 405: delete not allowed (see the Allow header)
+DELETE {{host}}/titles/tt0468569
+
+
+### ---- Persons ----
+
+### Browse all persons, best known first
+GET {{host}}/persons?limit=5
+
+### Name search (name_search)
+GET {{host}}/persons?q=keanu
+
+### Structured search (structured_name_search): played Joker in a "dark knight" title
+GET {{host}}/persons?title=dark knight&character=joker
+
+### One person, with professions and name rating
+GET {{host}}/persons/nm0000206
+
+### Co-players, most shared titles first
+GET {{host}}/persons/nm0000206/co-players
+
+### A person without a rating (none of their titles has votes): "rating" is null
+GET {{host}}/persons/nm0000042
+
+### 404: no such person
+GET {{host}}/persons/nm0000000
+
+### 404: co-players of a person who does not exist
+GET {{host}}/persons/nm0000000/co-players
+
+### 400: malformed id
+GET {{host}}/persons/abc
+
+### 400: q and structured search together
+GET {{host}}/persons?q=keanu&name=reeves
+
+### 400: the same parameter given twice
+GET {{host}}/persons?q=keanu&q=reeves
+
+### 405: persons are read-only (see the Allow header)
+POST {{host}}/persons
+
+### 405: persons are read-only (see the Allow header)
+DELETE {{host}}/persons/nm0000206
 @base = http://localhost:3000
 @token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTUwODk2ODcsImV4cCI6MTc5NTA5MzI4Nywic3ViIjoiNiJ9.VlsMgMij0oEJxs86cFns4jlqEyjRpdeOrWKKtOpXcyc
 @user = 6
