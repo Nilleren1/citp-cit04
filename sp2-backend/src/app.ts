@@ -2,7 +2,6 @@
 // Kept apart from index.ts so the app can be used without starting a server.
 
 import express from 'express';
-import cors from 'cors';
 import { corsOptions } from './config.js';
 import { errorHandler, notFound } from './middleware/errors.js';
 import { titles } from './routes/titles.js';

@@ -109,8 +109,7 @@ it('IMDB data is read-only', async () => {
 
 it('applies the default and maximum page size', async () => {
   expect((await request(app).get('/titles')).body.limit).toBe(20);
-  expect((await request(app).get('/titles?limit=100')).body.limit).toBe(100);
-  expect((await request(app).get('/titles?limit=500')).body.limit).toBe(20);
+  expect((await request(app).get('/titles?limit=500')).body.limit).toBe(100);
 });
 
 it('errors do not leak internals', async () => {

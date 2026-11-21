@@ -7,6 +7,7 @@ import * as userService from '../services/users.js';
 import * as usersData from '../data/users.js';
 import * as searchHistoryData from '../data/search_history.js';
 import * as recommendationsData from '../data/recommendations.js';
+import * as keywordsData from '../data/keywords.js';
 import { buildPage } from '../helpers/page.js';
 import { BASE_URL } from '../config.js';
 import { authenticate, requireOwnership } from '../middleware/auth.js';
@@ -246,7 +247,7 @@ router.get('/keywords', paging, async (req, res) => {
   const words = q.trim().split(/\s+/);
   const { limit, offset } = res.locals.paging;
 
-  const rows = await userService.searchKeywords(words, limit + 1, offset);
+  const rows = await keywordsData.searchKeywords(words, limit + 1, offset);
 
   res.json(buildPage(req, rows, limit, offset, (k) => k));
 });

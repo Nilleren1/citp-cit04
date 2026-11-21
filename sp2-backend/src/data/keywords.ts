@@ -5,7 +5,7 @@ export interface Keyword {
   frequency: number;
 }
 
-export async function search(words: string[], limit: number, offset: number): Promise<Keyword[]> {
+export async function searchKeywords(words: string[], limit: number, offset: number): Promise<Keyword[]> {
   const { rows } = await pool.query(
     `SELECT word, frequency::int AS frequency
      FROM word_to_words($1::text[], $2::integer, NULL::integer)

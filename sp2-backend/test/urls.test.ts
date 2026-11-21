@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { tconstFromUrl, nconstFromUrl } from '../src/routes/urls.js';
+import { tconstFromUrl, nconstFromUrl } from '../src/helpers/urls.js';
 
 describe('tconstFromUrl', () => {
   it('extracts the id from a title URL', () => {
