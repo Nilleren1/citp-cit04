@@ -1,5 +1,11 @@
+// Data access for users: creating an account and looking one up for login.
+
 import { pool } from '../db.js';
 
+/**
+ * Creates a user through the create_user database function and returns the new user_id.
+ * A taken username fails with a unique violation (code 23505).
+ */
 export async function createUser
 (
 username: string,
@@ -19,6 +25,7 @@ return result.rows[0].user_id;
 }
 
 
+/** The user with the given username, including the password hash, or undefined if there is none. */
 export async function findUserByUsername(username: string) 
 {
 const result = await pool.query<{
