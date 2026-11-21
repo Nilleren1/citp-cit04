@@ -60,8 +60,8 @@ persons.get('/:nconst', async (req, res) => {
   res.json(toPersonDto(person, BASE_URL));
 });
 
-// Most shared titles first (D6), or with ?sort=popularity most popular first (D8).
-persons.get('/:nconst/co-players', oneOf('sort', ['popularity']), paging, async (req, res) => {
+// ?sort=frequency (the default): most shared titles first (D6). ?sort=popularity: most popular first (D8).
+persons.get('/:nconst/co-players', oneOf('sort', ['frequency', 'popularity']), paging, async (req, res) => {
   const nconst = String(req.params.nconst);
   const { limit, offset } = res.locals.paging;
   if (!(await personData.exists(nconst))) throw notFound(nconst);
