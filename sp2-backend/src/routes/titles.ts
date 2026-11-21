@@ -1,4 +1,4 @@
-// /titles: browse, search, one title, its cast and similar titles.
+// /titles: browse, search, one title, its cast (in billing order or by popularity) and similar titles.
 // GET /titles/:tconst/ratings belongs to the ratings router.
 
 import { Router, type Request } from 'express';
@@ -28,12 +28,13 @@ const notFound = (tconst: string) => new ApiError(404, 'not_found', `No title wi
  *   ?q=batman                  substring of the title or plot
  *   ?q=batman joker&match=exact  titles with all the words
  *   ?q=batman joker&match=best   titles with the most of the words, best first
+ *   ?q=batman joker&match=weighted  like best, but rare words count more than common ones
  *   ?title=&plot=&character=&person=  structured search, all given fields must match
  */
 function readSearch(req: Request): titleData.TitleSearch | null {
   const q = queryText(req, 'q');
-  // The oneOf middleware has already checked that match is 'exact' or 'best'.
-  const match = queryText(req, 'match') as 'exact' | 'best' | undefined;
+  // The oneOf middleware has already checked that match is 'exact', 'best' or 'weighted'.
+  const match = queryText(req, 'match') as 'exact' | 'best' | 'weighted' | undefined;
   const fields = queryFields(req, STRUCTURED);
   const structured = Object.keys(fields).length > 0;
 
@@ -45,7 +46,7 @@ function readSearch(req: Request): titleData.TitleSearch | null {
   return structured ? fields : null;
 }
 
-titles.get('/', optionalAuthenticate, oneOf('match', ['exact', 'best']), paging, async (req, res) => {
+titles.get('/', optionalAuthenticate, oneOf('match', ['exact', 'best', 'weighted']), paging, async (req, res) => {
   const { limit, offset } = res.locals.paging;
   const search = readSearch(req);
 
@@ -71,12 +72,15 @@ titles.get('/:tconst', async (req, res) => {
   res.json(toTitleDto(title, cast, BASE_URL));
 });
 
-titles.get('/:tconst/cast', paging, async (req, res) => {
+// The whole cast and crew in billing order, or with ?sort=popularity only the actors, most popular first.
+titles.get('/:tconst/cast', oneOf('sort', ['popularity']), paging, async (req, res) => {
   const tconst = String(req.params.tconst);
   const { limit, offset } = res.locals.paging;
   if (!(await titleData.exists(tconst))) throw notFound(tconst);
 
-  const rows = await titleData.cast(tconst, limit + 1, offset);
+  const rows = req.query.sort === 'popularity'
+    ? await titleData.popularCast(tconst, limit + 1, offset)
+    : await titleData.cast(tconst, limit + 1, offset);
   res.json(buildPage(req, rows, limit, offset, (c) => toCastMemberDto(c, BASE_URL)));
 });
 

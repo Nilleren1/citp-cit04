@@ -123,6 +123,27 @@
         "next": null,
         "prev": null
     },
+    "PersonWordPage": {
+        "url": "http://localhost:3000/persons/nm0000206/words?limit=3&offset=0",
+        "items": [
+            {
+                "word": "keanu",
+                "frequency": 16
+            },
+            {
+                "word": "reeves",
+                "frequency": 16
+            },
+            {
+                "word": "self",
+                "frequency": 12
+            }
+        ],
+        "limit": 3,
+        "offset": 0,
+        "next": "http://localhost:3000/persons/nm0000206/words?limit=3&offset=3",
+        "prev": null
+    },
     "Keywords": {
         "url": "http://localhost:3000/keywords?q=batman+joker&limit=20&offset=0",
         "items": [

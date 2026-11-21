@@ -27,6 +27,9 @@ GET {{host}}/titles?q=batman joker&match=exact
 ### Titles with most of the words, best first (best_match_query)
 GET {{host}}/titles?q=batman joker&match=best&limit=5&offset=5
 
+### Weighted search: rare words count more than common ones (weighted_search)
+GET {{host}}/titles?q=batman joker&match=weighted&limit=5
+
 ### Structured search (structured_string_search)
 GET {{host}}/titles?person=heath ledger&character=joker
 
@@ -35,6 +38,9 @@ GET {{host}}/titles/tt0468569
 
 ### Full cast, paged
 GET {{host}}/titles/tt0468569/cast?limit=5&offset=5
+
+### Actors only, most popular first (get_popular_actors)
+GET {{host}}/titles/tt0468569/cast?sort=popularity&limit=5
 
 ### Similar titles (get_similar_titles, takes a few seconds)
 GET {{host}}/titles/tt0468569/similar-titles?limit=5
@@ -54,8 +60,11 @@ GET {{host}}/titles/abc
 ### 400: match without q
 GET {{host}}/titles?match=best
 
-### 400: match is not one of exact/best
+### 400: match is not one of exact/best/weighted
 GET {{host}}/titles?q=batman&match=foo
+
+### 400: sort is not popularity
+GET {{host}}/titles/tt0468569/cast?sort=rating
 
 ### 400: q and structured search together
 GET {{host}}/titles?q=batman&title=joker
@@ -96,6 +105,12 @@ GET {{host}}/persons/nm0000206
 ### Co-players, most shared titles first
 GET {{host}}/persons/nm0000206/co-players
 
+### Co-players, most popular first (get_popular_costars)
+GET {{host}}/persons/nm0000206/co-players?sort=popularity&limit=5
+
+### Words that occur most often in the person's titles (person_words, by nconst)
+GET {{host}}/persons/nm0000206/words?limit=10
+
 ### A person without a rating (none of their titles has votes): "rating" is null
 GET {{host}}/persons/nm0000042
 
@@ -104,6 +119,9 @@ GET {{host}}/persons/nm0000000
 
 ### 404: co-players of a person who does not exist
 GET {{host}}/persons/nm0000000/co-players
+
+### 404: words of a person who does not exist
+GET {{host}}/persons/nm0000000/words
 
 ### 400: malformed id
 GET {{host}}/persons/abc

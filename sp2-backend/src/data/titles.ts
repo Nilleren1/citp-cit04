@@ -1,4 +1,5 @@
-// Data access for titles: browsing, searching, one title, its cast and similar titles.
+// Data access for titles: browsing, searching, one title, its cast (in billing order or by popularity)
+// and similar titles.
 // The search functions are the ones from sp1-database/D_functions.sql.
 
 import { pool } from '../db.js';
@@ -36,11 +37,11 @@ export interface CastMember {
 /**
  * A title search.
  *   { q, match }  free text: 'substring' = string_search (D2), 'exact' = exact_match_query (D11),
- *                 'best' = best_match_query (D12)
+ *                 'best' = best_match_query (D12), 'weighted' = weighted_search (D14)
  *   { title, plot, character, person }  structured_string_search (D4); omitted fields are ignored
  */
 export type TitleSearch =
-  | { q: string; match: 'substring' | 'exact' | 'best' }
+  | { q: string; match: 'substring' | 'exact' | 'best' | 'weighted' }
   | { title?: string; plot?: string; character?: string; person?: string };
 
 // The SELECT list for a TitleSummary; the query must call the title table t.
@@ -104,12 +105,20 @@ export async function search(
   let args: unknown[];
 
   if ('q' in s) {
-    args = [s.q, userId];
-    source = {
-      substring: `string_search($1, $2) WITH ORDINALITY AS s(tconst, primarytitle, n)`,
-      exact: `exact_match_query($1, $2) WITH ORDINALITY AS s(tconst, primarytitle, startyear, n)`,
-      best: `best_match_query($1, $2) WITH ORDINALITY AS s(tconst, primarytitle, startyear, rank, n)`,
-    }[s.match];
+    if (s.match === 'weighted') {
+      // weighted_search takes the words as an array, and how many rows to return,
+      // so ask for enough to cover this page.
+      args = [s.q.split(/\s+/), limit + offset, userId];
+      source = `weighted_search($1::text[], $2, $3)
+                WITH ORDINALITY AS s(tconst, primarytitle, relevance, matched_words, n)`;
+    } else {
+      args = [s.q, userId];
+      source = {
+        substring: `string_search($1, $2) WITH ORDINALITY AS s(tconst, primarytitle, n)`,
+        exact: `exact_match_query($1, $2) WITH ORDINALITY AS s(tconst, primarytitle, startyear, n)`,
+        best: `best_match_query($1, $2) WITH ORDINALITY AS s(tconst, primarytitle, startyear, rank, n)`,
+      }[s.match];
+    }
   } else {
     args = [s.title ?? null, s.plot ?? null, s.character ?? null, s.person ?? null, userId];
     source = `structured_string_search($1, $2, $3, $4, $5) WITH ORDINALITY AS s(tconst, primarytitle, n)`;
@@ -137,6 +146,31 @@ export async function cast(tconst: string, limit: number, offset: number): Promi
      JOIN person p ON p.nconst = w.nconst
      WHERE w.tconst = $1
      ORDER BY w.ordering
+     LIMIT $2 OFFSET $3`,
+    [tconst, limit, offset],
+  );
+  return rows;
+}
+
+/**
+ * The actors of a title, most popular (highest person rating) first, through get_popular_actors (D8).
+ * Only actors and actresses, one row each; an actor with several roles has them joined in characters.
+ */
+export async function popularCast(tconst: string, limit: number, offset: number): Promise<CastMember[]> {
+  const { rows } = await pool.query<CastMember>(
+    // The function returns no category, so it is taken from the actor's first credit in the title.
+    `SELECT s.nconst,
+            s.primaryname AS name,
+            (SELECT w.category
+             FROM worked_on w
+             WHERE w.tconst = $1 AND w.nconst = s.nconst::character(10)
+               AND w.category IN ('actor', 'actress')
+             ORDER BY w.ordering
+             LIMIT 1) AS category,
+            s.characters
+     FROM get_popular_actors($1)
+          WITH ORDINALITY AS s(nconst, primaryname, characters, rating, numvotes, num_titles, n)
+     ORDER BY s.n
      LIMIT $2 OFFSET $3`,
     [tconst, limit, offset],
   );
