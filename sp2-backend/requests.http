@@ -310,3 +310,9 @@ GET {{base}}/keywords?q=
 
 ### Keywords: bad limit (400)
 GET {{base}}/keywords?q=batman&limit=abc
+
+### Preflight (expect 204 with Access-Control-Allow-* headers)
+OPTIONS {{base}}/users/6/ratings
+Origin: http://localhost:5173
+Access-Control-Request-Method: POST
+Access-Control-Request-Headers: authorization,content-type
