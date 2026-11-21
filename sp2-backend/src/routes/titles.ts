@@ -7,7 +7,7 @@ import { toCastMemberDto, toTitleDto, toTitleSummaryDto } from '../dto/titles.js
 import { BASE_URL } from '../config.js';
 import { buildPage } from '../helpers/page.js';
 import { queryFields, queryText } from '../helpers/query.js';
-import { checkParam, oneOf, paging } from '../middleware/validate.js';
+import { checkParam, oneOf, paging } from '../middleware/validation.js';
 import { ApiError, methodNotAllowed, validationError } from '../middleware/errors.js';
 
 export const titles = Router();

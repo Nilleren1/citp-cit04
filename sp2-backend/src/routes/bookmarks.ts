@@ -5,9 +5,8 @@ import { toPersonBookmarkDto, toTitleBookmarkDto } from '../dto/bookmarks.js';
 import { buildPage } from '../helpers/page.js';
 import { nconstFromUrl, tconstFromUrl } from '../helpers/urls.js';
 import { BASE_URL } from '../config.js';
-import { authenticate } from '../middleware/authenticate.js';
-import { requireOwnership } from '../middleware/authorize.js';
-import { checkParam, oneOf, paging } from '../middleware/validate.js';
+import { authenticate, requireOwnership } from '../middleware/auth.js';
+import { checkParam, oneOf, paging } from '../middleware/validation.js';
 import { ApiError, ErrorDetail } from '../middleware/errors.js';
 
 const router = Router();

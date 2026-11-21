@@ -6,7 +6,7 @@ import { toCoPlayerDto, toPersonDto, toPersonSummaryDto } from '../dto/persons.j
 import { BASE_URL } from '../config.js';
 import { buildPage } from '../helpers/page.js';
 import { queryFields, queryText } from '../helpers/query.js';
-import { checkParam, paging } from '../middleware/validate.js';
+import { checkParam, paging } from '../middleware/validation.js';
 import { ApiError, methodNotAllowed, validationError } from '../middleware/errors.js';
 
 export const persons = Router();
