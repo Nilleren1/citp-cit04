@@ -113,7 +113,7 @@ POST {{host}}/persons
 ### 405: persons are read-only (see the Allow header)
 DELETE {{host}}/persons/nm0000206
 @base = http://localhost:3000
-@tokenRating = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTUyNjAwODEsImV4cCI6MTc5NTI2MzY4MSwic3ViIjoiMzAxNiJ9.xInraCRzRqcRUPXwNtwGYmemMKGl7h5G-XAPb-H-fjk
+@tokenRating = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTUyNjQ4MTYsImV4cCI6MTc5NTI2ODQxNiwic3ViIjoiMzAxNiJ9.I_--EuwdpSulZFEoMqfEqxZkEzonYw9c-274ifa-RJ4
 @user = 3016
 @userId = 81
 
