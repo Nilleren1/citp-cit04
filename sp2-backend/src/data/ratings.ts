@@ -65,7 +65,7 @@ export async function rate(
   client: PoolClient, userId: number, tconst: string, rating: number, review: string | null,
 ): Promise<boolean> {
   const { rows } = await client.query<{ isNew: boolean }>(
-    `SELECT is_new_rating AS "isNew" FROM rate($1, $2, $3, $4)`,
+    `SELECT is_new_rating AS "isNew" FROM rate($1::integer, $2::character(10), $3::integer, $4::text)`,
     [userId, tconst, rating, review],
   );
   return rows[0].isNew;
@@ -74,7 +74,7 @@ export async function rate(
 /** Deletes a rating through delete_rating(). True when there was one to delete. */
 export async function remove(userId: number, tconst: string): Promise<boolean> {
   const { rows } = await pool.query<{ removed: boolean }>(
-    `SELECT delete_rating($1, $2) AS removed`,
+    `SELECT delete_rating($1::integer, $2::character(10)) AS removed`,
     [userId, tconst],
   );
   return rows[0].removed;

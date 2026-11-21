@@ -1,6 +1,4 @@
 import { Router } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import * as userService from '../services/users.js';
 import { buildPage } from './page.js';
 import { BASE_URL } from '../config.js';
@@ -8,14 +6,14 @@ import { authenticate } from '../middleware/authenticate.js';
 import { requireOwnership } from '../middleware/authorize.js';
 import { checkParam, paging } from '../middleware/validate.js';
 import { ApiError, validationError } from '../middleware/errors.js';
+import {
+    hashPassword,
+    verifyPassword,
+    generateToken,
+} from '../auth/crypto.js';
 
 const router = Router();
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-    throw new Error('JWT_SECRET environment variable is missing');
-}
 
 router.param('userId', checkParam('userId'));
 
@@ -42,7 +40,7 @@ router.post('/users', async (req, res) => {
         throw validationError('password', 'Password must contain at least 8 characters.');
     }
 
-    const passwordHash = await bcrypt.hash(password, 12);
+    const passwordHash = await hashPassword(password);
 
     let userId: number;
 
@@ -78,15 +76,11 @@ router.post('/tokens', async (req, res) => {
 
     const credentials = await userService.findCredentialsByUsername(username.trim());
 
-    if (!credentials || !(await bcrypt.compare(password, credentials.passwordHash))) {
+    if (!credentials || !(await verifyPassword(password, credentials.passwordHash))) {
         throw new ApiError(401, 'unauthorized', 'Invalid username or password.');
     }
 
-    const token = jwt.sign(
-        { sub: String(credentials.userId) },
-        JWT_SECRET,
-        { algorithm: 'HS256', expiresIn: '1h' },
-    );
+    const token = generateToken(credentials.userId);
 
     res.status(201).json({ token });
 });
@@ -157,7 +151,7 @@ router.put('/users/:userId/password', async (req, res) => {
         throw new ApiError(404, 'not_found', 'No such user.');
     }
 
-    const passwordMatches = await bcrypt.compare(
+    const passwordMatches = await verifyPassword(
         currentPassword,
         credentials.passwordHash,
     );
@@ -166,7 +160,7 @@ router.put('/users/:userId/password', async (req, res) => {
         throw new ApiError(401, 'unauthorized', 'Current password is incorrect.');
     }
 
-    const passwordHash = await bcrypt.hash(newPassword, 12);
+    const passwordHash = await hashPassword(newPassword);
     await userService.updatePassword(userId, passwordHash);
 
     res.status(204).send();

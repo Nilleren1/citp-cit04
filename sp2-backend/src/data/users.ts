@@ -38,7 +38,8 @@ export async function find(userId: number): Promise<User | undefined> {
 export async function findCredentialsByUsername(username: string): Promise<UserCredentials | undefined> {
   const { rows } = await pool.query<UserCredentials>(
     `SELECT user_id AS "userId", username, password AS "passwordHash"
-     FROM get_user($1)`,
+     FROM app_user
+     WHERE username = $1`,
     [username],
   );
   return rows[0];

@@ -24,9 +24,13 @@ export async function listTitleBookmarks(
   userId: number, list: BookmarkList | undefined, limit: number, offset: number,
 ): Promise<TitleBookmark[]> {
   const { rows } = await pool.query<TitleBookmark>(
-    `SELECT $1::integer AS "userId", tconst, primarytitle AS title,
-            status AS list, bookmarked_at AS "createdAt"
-     FROM get_title_bookmarks($1, $2)
+    `SELECT b.user_id AS "userId", trim(b.tconst) AS tconst,
+            t.primarytitle AS title, b.status AS list,
+            b.created_at AS "createdAt"
+     FROM bookmark_title b
+     JOIN title t ON t.tconst = b.tconst
+     WHERE b.user_id = $1
+       AND ($2::text IS NULL OR b.status = $2::text)
      ORDER BY "createdAt" DESC, title
      LIMIT $3 OFFSET $4`,
     [userId, list ?? null, limit, offset],
@@ -75,8 +79,11 @@ export async function removeTitleBookmark(userId: number, tconst: string): Promi
 /** One page of a user's person bookmarks, newest first. */
 export async function listPersonBookmarks(userId: number, limit: number, offset: number): Promise<PersonBookmark[]> {
   const { rows } = await pool.query<PersonBookmark>(
-    `SELECT $1::integer AS "userId", nconst, primaryname AS name, bookmarked_at AS "createdAt"
-     FROM get_person_bookmarks($1)
+    `SELECT b.user_id AS "userId", trim(b.nconst) AS nconst,
+            p.primaryname AS name, b.created_at AS "createdAt"
+     FROM bookmark_person b
+     JOIN person p ON p.nconst = b.nconst
+     WHERE b.user_id = $1
      ORDER BY "createdAt" DESC, name
      LIMIT $2 OFFSET $3`,
     [userId, limit, offset],

@@ -62,3 +62,37 @@ psql -U postgres -d imdb -a -f sp1-database/F_test.sql > sp1-database/F_test_out
 `-a` prints each statement above its result, and `2>&1` also captures
 notices and errors. Tests that modify data run inside `BEGIN ... ROLLBACK`,
 so the database is unchanged afterwards.
+
+## CORS configuration (Subproject 2-D.7)
+
+The backend uses the Express `cors` middleware to control which
+origins can access the API from a browser.
+
+The following origins are allowed by default:
+
+- http://localhost:5173
+- http://127.0.0.1:5173
+- http://localhost:3001
+- http://127.0.0.1:3001
+
+An additional frontend origin can be configured using the
+`FRONTEND_ORIGIN` environment variable.
+
+The CORS policy allows the following HTTP methods:
+
+- GET
+- POST
+- PUT
+- PATCH
+- DELETE
+- OPTIONS
+
+The allowed request headers are `Content-Type` and `Authorization`.
+Credentials are disabled. Requests without an Origin header are
+also allowed. Requests from origins not included in the allowed
+list are rejected with HTTP 403.
+
+Preflight responses are cached for 600 seconds.
+
+The configuration is implemented in `sp2-backend/src/middleware/cors.ts`
+and is registered in the Express application before the routes.

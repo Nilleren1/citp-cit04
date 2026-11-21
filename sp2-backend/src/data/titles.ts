@@ -61,7 +61,7 @@ export async function findTitle(tconst: string): Promise<TitleRow | undefined> {
   numvotes AS "numVotes",
   plot,
   poster
-  
+
 FROM title
 WHERE tconst = $1`,
       [tconst]
@@ -110,7 +110,7 @@ WHERE w.tconst = $1
 ORDER BY w.ordering
 LIMIT $2
 OFFSET $3`,
-      [tconst, limit, offset]
+    [tconst, limit + 1, offset]
     );
 
   return result.rows;
@@ -120,7 +120,7 @@ export async function getSimilarTitles(tconst: string, limit = 20, offset = 0): 
   const result = await pool.query<SimilarTitleRow>
     (
       "SELECT * FROM get_similar_titles($1, $2) LIMIT $3 OFFSET $4",
-      [tconst, limit + offset, limit, offset]
+      [tconst, limit + offset + 1, limit + 1, offset]
     );
 
   return result.rows;
@@ -135,7 +135,7 @@ WHERE tconst = $1
 ORDER BY created_at DESC
 LIMIT $2
 OFFSET $3`,
-      [tconst, limit, offset]
+    [tconst, limit + 1, offset]
     );
 
   return result.rows;
