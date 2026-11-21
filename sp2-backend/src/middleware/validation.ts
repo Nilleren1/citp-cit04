@@ -4,7 +4,7 @@
 import { RequestHandler, RequestParamHandler } from 'express';
 import { validationError } from './errors.js';
 
-/** Page size when ?limit is not given, or is larger than MAX_LIMIT. */
+/** Page size when ?limit is not given. */
 export const DEFAULT_LIMIT = 20;
 export const MAX_LIMIT = 100;
 /** The largest PostgreSQL integer; larger ids and offsets would make the query fail. */
@@ -34,7 +34,7 @@ const toInt = (v: unknown): number | null =>
 
 /**
  * Reads ?limit and ?offset into res.locals.paging = { limit, offset }.
- * A limit above MAX_LIMIT falls back to DEFAULT_LIMIT.
+ * A limit above MAX_LIMIT is reduced to MAX_LIMIT.
  */
 export const paging: RequestHandler = (req, res, next) => {
   let limit = DEFAULT_LIMIT;
@@ -43,7 +43,7 @@ export const paging: RequestHandler = (req, res, next) => {
   if (req.query.limit !== undefined) {
     const n = toInt(req.query.limit);
     if (n === null || n < 1) return next(validationError('limit', 'Must be a positive integer.'));
-    limit = n > MAX_LIMIT ? DEFAULT_LIMIT : n;
+    limit = Math.min(n, MAX_LIMIT);
   }
   if (req.query.offset !== undefined) {
     const n = toInt(req.query.offset);

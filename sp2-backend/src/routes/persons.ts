@@ -4,9 +4,10 @@ import { Router, type Request } from 'express';
 import * as personData from '../data/persons.js';
 import { toCoPlayerDto, toPersonDto, toPersonSummaryDto } from '../dto/persons.js';
 import { BASE_URL } from '../config.js';
-import { buildPage } from './page.js';
-import { queryFields, queryText } from './query.js';
-import { checkParam, paging } from '../middleware/validate.js';
+import { buildPage } from '../helpers/page.js';
+import { queryFields, queryText } from '../helpers/query.js';
+import { optionalAuthenticate } from '../middleware/auth.js';
+import { checkParam, paging } from '../middleware/validation.js';
 import { ApiError, methodNotAllowed, validationError } from '../middleware/errors.js';
 
 export const persons = Router();
@@ -36,7 +37,7 @@ function readSearch(req: Request): personData.PersonSearch | null {
   return structured ? fields : null;
 }
 
-persons.get('/', paging, async (req, res) => {
+persons.get('/', optionalAuthenticate, paging, async (req, res) => {
   const { limit, offset } = res.locals.paging;
   const search = readSearch(req);
 

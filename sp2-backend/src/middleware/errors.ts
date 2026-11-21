@@ -80,5 +80,3 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
   console.error('API error:', err);
   res.status(500).json(body(500, 'internal_error', 'Something went wrong.'));
 };
-
-export const pgCode = (err: unknown): string | undefined => (err as { code?: string }).code;

@@ -4,7 +4,14 @@
 # click "Send Request" above any request below. Check the status codes, not
 # only the bodies.
 #
+# Requests with "Authorization: Bearer {{token}}" need a login first: send
+# "Login (201 + token)" in the users section. A token lasts 1 hour, then send
+# Login again. userId must be the id of the user who logs in (testuser88);
+# on another database, take it from the url that Register returns.
+#
 @host = http://localhost:3000
+@base = {{host}}
+@userId = 3016
 
 ### ---- Titles ----
 
@@ -62,7 +69,7 @@ GET {{host}}/titles?limit=0
 ### 400: offset must be a non-negative integer
 GET {{host}}/titles?offset=-1
 
-### 200: a limit above 100 falls back to the default, 20 (check "limit" in the body)
+### 200: a limit above 100 is capped at 100 (check "limit" in the body)
 GET {{host}}/titles?limit=500
 
 ### 405: titles are read-only (see the Allow header)
@@ -138,10 +145,10 @@ Content-Type: application/json
 { "title": "http://localhost:3000/titles/tt0112130", "rating": 9 }
 
 ### My ratings (public)
-GET {{base}}/users/{{user}}/ratings
+GET {{base}}/users/{{userId}}/ratings
 
 ### One rating
-GET {{base}}/users/{{user}}/ratings/tt0112130
+GET {{base}}/users/{{userId}}/ratings/tt0112130
 
 ### Change it
 PUT {{base}}/users/{{user}}/ratings/tt0112130
@@ -212,6 +219,10 @@ POST {{base}}/tokens
 Content-Type: application/json
 
 { "username": "testuser8", "password": "wrong" }
+
+### Search while logged in (200, and logged in history)
+GET {{base}}/titles?q=batman
+Authorization: Bearer {{token}}
 
 ### Get user (200)
 GET {{base}}/users/{{userId}}
