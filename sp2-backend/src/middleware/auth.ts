@@ -54,6 +54,16 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
   next();
 }
 
+/**
+ * Like authenticate, but a request without an Authorization header passes as anonymous
+ * (req.user stays undefined). A header that is sent must still hold a valid token, or it is a 401.
+ * Used on the search routes, which log the search in the user's history when they know who is asking.
+ */
+export async function optionalAuthenticate(req: Request, res: Response, next: NextFunction) {
+  if (req.headers.authorization === undefined) return next();
+  return authenticate(req, res, next);
+}
+
 // ---- Authorization ----
 
 /**

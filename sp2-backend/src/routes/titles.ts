@@ -7,6 +7,7 @@ import { toCastMemberDto, toTitleDto, toTitleSummaryDto } from '../dto/titles.js
 import { BASE_URL } from '../config.js';
 import { buildPage } from '../helpers/page.js';
 import { queryFields, queryText } from '../helpers/query.js';
+import { optionalAuthenticate } from '../middleware/auth.js';
 import { checkParam, oneOf, paging } from '../middleware/validation.js';
 import { ApiError, methodNotAllowed, validationError } from '../middleware/errors.js';
 
@@ -44,7 +45,7 @@ function readSearch(req: Request): titleData.TitleSearch | null {
   return structured ? fields : null;
 }
 
-titles.get('/', oneOf('match', ['exact', 'best']), paging, async (req, res) => {
+titles.get('/', optionalAuthenticate, oneOf('match', ['exact', 'best']), paging, async (req, res) => {
   const { limit, offset } = res.locals.paging;
   const search = readSearch(req);
 

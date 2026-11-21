@@ -49,10 +49,11 @@ router.post('/users', async (req, res) => {
     }
 
     const user = await userService.find(result);
+    if (!user) throw new Error('A user that was just created could not be read.');
 
     res.status(201)
         .location(`${BASE_URL}/users/${result}`)
-        .json(user);
+        .json(toUserDto(user, BASE_URL));
 });
 
 // ---- Login ----
