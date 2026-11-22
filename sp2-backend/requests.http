@@ -158,10 +158,9 @@ POST {{host}}/persons
 
 ### 405: persons are read-only (see the Allow header)
 DELETE {{host}}/persons/nm0000206
-@base = http://localhost:3000
-@tokenRating = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTUyNTcxMDMsImV4cCI6MTc5NTI2MDcwMywic3ViIjoiNiJ9.yd4LLZtlx5r6kekPMqwdKZqqXzQBpwwR6ETLUWdy4MU
-@user = 6
-@userId = 81
+
+
+### ---- Ratings and bookmarks (log in first, see the top of the file) ----
 
 ### Reviews of a title (public)
 GET {{base}}/titles/tt0816692/ratings
@@ -170,15 +169,15 @@ GET {{base}}/titles/tt0816692/ratings
 GET {{base}}/titles/tt0816692/ratings?limit=2&offset=0
 
 ### Create a rating
-POST {{base}}/users/{{user}}/ratings
-Authorization: Bearer {{tokenRating}}
+POST {{base}}/users/{{userId}}/ratings
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "title": "http://localhost:3000/titles/tt0112130", "rating": 9, "review": "Great" }
 
 ### Create again (expect 409)
-POST {{base}}/users/{{user}}/ratings
-Authorization: Bearer {{tokenRating}}
+POST {{base}}/users/{{userId}}/ratings
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "title": "http://localhost:3000/titles/tt0112130", "rating": 9 }
@@ -190,40 +189,43 @@ GET {{base}}/users/{{userId}}/ratings
 GET {{base}}/users/{{userId}}/ratings/tt0112130
 
 ### Change it
-PUT {{base}}/users/{{user}}/ratings/tt0112130
-Authorization: Bearer {{tokenRating}}
+PUT {{base}}/users/{{userId}}/ratings/tt0112130
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "rating": 8, "review": "Still great" }
 
 ### Delete it (expect 204, also the second time)
-DELETE {{base}}/users/{{user}}/ratings/tt0112130
-Authorization: Bearer {{tokenRating}}
+DELETE {{base}}/users/{{userId}}/ratings/tt0112130
+Authorization: Bearer {{token}}
 
 ### Bookmark a title
-POST {{base}}/users/{{user}}/title-bookmarks
-Authorization: Bearer {{{{tokenRating}}}}
+POST {{base}}/users/{{userId}}/title-bookmarks
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "title": "http://localhost:3000/titles/tt0112130", "list": "watchlist" }
 
 ### Move it to watched
-PUT {{base}}/users/{{user}}/title-bookmarks/tt0112130
-Authorization: Bearer {{tokenRating}}
+PUT {{base}}/users/{{userId}}/title-bookmarks/tt0112130
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "list": "watched" }
 
 ### Only watched titles
-GET {{base}}/users/{{user}}/title-bookmarks?list=watched
-Authorization: Bearer {{tokenRating}}
+GET {{base}}/users/{{userId}}/title-bookmarks?list=watched
+Authorization: Bearer {{token}}
 
 ### Bookmark a person
-POST {{base}}/users/{{user}}/person-bookmarks
-Authorization: Bearer {{tokenRating}}
+POST {{base}}/users/{{userId}}/person-bookmarks
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "person": "http://localhost:3000/persons/nm0000206" }
+
+
+### ---- Users ----
 
 ### Register (201 + Location)
 POST {{base}}/users
